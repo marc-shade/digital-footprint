@@ -103,6 +103,17 @@ CREATE INDEX IF NOT EXISTS idx_removals_status ON removals(status);
 CREATE INDEX IF NOT EXISTS idx_removals_person ON removals(person_id);
 CREATE INDEX IF NOT EXISTS idx_breaches_person ON breaches(person_id);
 CREATE INDEX IF NOT EXISTS idx_brokers_slug ON brokers(slug);
+
+CREATE TABLE IF NOT EXISTS scheduled_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_name TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    status TEXT DEFAULT 'running',
+    details TEXT DEFAULT '{}',
+    error TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_scheduled_runs_job ON scheduled_runs(job_name);
 """
 
 
@@ -323,6 +334,44 @@ class Database:
     def get_pending_verifications(self) -> list[dict]:
         rows = self.conn.execute(
             "SELECT * FROM removals WHERE status = 'submitted' AND next_check_at <= datetime('now') ORDER BY next_check_at",
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    # --- Scheduled run operations ---
+
+    def insert_scheduled_run(self, job_name: str, started_at: str) -> int:
+        cursor = self.conn.execute(
+            "INSERT INTO scheduled_runs (job_name, started_at) VALUES (?, ?)",
+            (job_name, started_at),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_scheduled_run(self, run_id: int) -> dict | None:
+        row = self.conn.execute("SELECT * FROM scheduled_runs WHERE id = ?", (run_id,)).fetchone()
+        return dict(row) if row else None
+
+    def update_scheduled_run(self, run_id: int, **kwargs) -> None:
+        sets = []
+        values = []
+        for key, value in kwargs.items():
+            sets.append(f"{key} = ?")
+            values.append(value)
+        values.append(run_id)
+        self.conn.execute(f"UPDATE scheduled_runs SET {', '.join(sets)} WHERE id = ?", values)
+        self.conn.commit()
+
+    def get_last_run(self, job_name: str) -> dict | None:
+        row = self.conn.execute(
+            "SELECT * FROM scheduled_runs WHERE job_name = ? ORDER BY started_at DESC LIMIT 1",
+            (job_name,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def get_run_history(self, limit: int = 20) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM scheduled_runs ORDER BY started_at DESC LIMIT ?",
+            (limit,),
         ).fetchall()
         return [dict(r) for r in rows]
 
