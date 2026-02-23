@@ -56,10 +56,13 @@ async def check_hibp_pastes(
             headers=headers,
         )
 
-    if resp.status_code == 404:
+    if resp.status_code != 200:
         return []
 
     pastes = resp.json()
+    if not isinstance(pastes, list):
+        return []
+
     return [
         PasteResult(
             source=p.get("Source", "Unknown"),
