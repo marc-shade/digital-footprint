@@ -130,17 +130,21 @@ def footprint_verify_removals(person_id: int = 1) -> str:
     return do_verify_removals(person_id=person_id, db=db)
 
 
-# --- Stub tools for future phases ---
+# --- Phase 4: Monitoring tools ---
+
+from digital_footprint.tools.monitor_tools import do_dark_web_monitor_sync, do_social_audit
 
 @mcp.tool()
 def footprint_dark_web_monitor(email: str = None) -> str:
-    """Monitor dark web sources for exposed personal data. [Phase 4 - Not yet implemented]"""
-    return "Dark web monitoring not yet implemented. Coming in Phase 4."
+    """Monitor dark web sources for exposed personal data (paste sites, Ahmia.fi, holehe)."""
+    if not email:
+        return "Provide an email address to monitor."
+    return do_dark_web_monitor_sync(email=email, hibp_api_key=config.hibp_api_key)
 
 @mcp.tool()
 def footprint_social_audit(person_id: int = 1) -> str:
-    """Audit social media privacy settings and exposure. [Phase 4 - Not yet implemented]"""
-    return "Social media audit not yet implemented. Coming in Phase 4."
+    """Audit social media privacy settings and public exposure."""
+    return do_social_audit(person_id=person_id, db=db)
 
 
 if __name__ == "__main__":
