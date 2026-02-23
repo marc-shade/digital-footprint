@@ -1,0 +1,29 @@
+name: Spokeo
+url: https://www.spokeo.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://www.spokeo.com/optout
+  steps:
+    - Search for your profile on spokeo.com
+    - Copy the full URL of your profile
+    - Navigate to spokeo.com/optout
+    - Paste the profile URL into the form
+    - Enter your email address
+    - Complete the CAPTCHA
+    - Click submit
+    - Check email for confirmation link
+    - Click the confirmation link
+  captcha: true
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Data may remain visible to paid subscribers even after opt-out. Check name variations."
