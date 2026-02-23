@@ -4,7 +4,7 @@
   <img src="assets/bigfoot-hacker.png" alt="Bigfoot cleaning up your digital footprint on a 1980s computer" width="600">
 </p>
 
-Self-hosted personal data removal and privacy protection system. Replicates the capabilities of VanishID, DeleteMe, and Incogni through an MCP server, Claude Code skills, and automated pipelines.
+Self-hosted personal data removal and privacy protection system. Replicates the capabilities of online footprint removal services through an MCP server, Claude Code skills, and automated pipelines.
 
 ## What It Does
 
