@@ -13,3 +13,14 @@ def tmp_db(tmp_path):
     db.initialize()
     yield db
     db.close()
+
+
+def make_test_db() -> Database:
+    """Create an in-memory database for testing (no fixture required)."""
+    config = Config(
+        db_path=Path(":memory:"),
+        brokers_dir=Path(__file__).parent.parent / "digital_footprint" / "brokers",
+    )
+    db = Database(config)
+    db.initialize()
+    return db
