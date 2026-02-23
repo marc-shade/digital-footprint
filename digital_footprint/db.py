@@ -275,6 +275,57 @@ class Database:
             notes=row["notes"],
         )
 
+    # --- Removal operations ---
+
+    def insert_removal(
+        self,
+        person_id: int,
+        broker_id: int,
+        method: str,
+        finding_id: Optional[int] = None,
+        status: str = "pending",
+        reference_id: Optional[str] = None,
+        next_check_at: Optional[str] = None,
+        submitted_at: Optional[str] = None,
+    ) -> int:
+        cursor = self.conn.execute(
+            """INSERT INTO removals
+            (person_id, broker_id, method, finding_id, status, notes, next_check_at, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (person_id, broker_id, method, finding_id, status, reference_id, next_check_at, submitted_at),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_removal(self, removal_id: int) -> Optional[dict]:
+        row = self.conn.execute("SELECT * FROM removals WHERE id = ?", (removal_id,)).fetchone()
+        if not row:
+            return None
+        return dict(row)
+
+    def get_removals_by_person(self, person_id: int) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM removals WHERE person_id = ? ORDER BY id",
+            (person_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def update_removal(self, removal_id: int, **kwargs) -> None:
+        sets = []
+        values = []
+        for key, value in kwargs.items():
+            sets.append(f"{key} = ?")
+            values.append(value)
+        values.append(removal_id)
+        self.conn.execute(f"UPDATE removals SET {', '.join(sets)} WHERE id = ?", values)
+        self.conn.commit()
+
+    def get_pending_verifications(self) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM removals WHERE status = 'submitted' AND next_check_at <= datetime('now') ORDER BY next_check_at",
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     # --- Status ---
 
     def get_status(self) -> dict:
