@@ -1,0 +1,24 @@
+# Broker YAML Schema Reference
+# See docs/BROKER_REGISTRY.md for full documentation
+
+required:
+  - name        # string: Human-readable name
+  - url         # string: Primary website URL
+  - category    # enum: people_search|background_check|public_records|marketing|social_aggregator|property|financial|genealogy|reverse_lookup|image_search
+
+optional:
+  opt_out:
+    method: enum    # web_form|email|api|phone|mail
+    url: string
+    email: string
+    steps: list[string]
+    captcha: boolean
+    email_verification: boolean
+    phone_verification: boolean
+    time_to_removal: string
+  difficulty: enum  # easy|medium|hard|manual
+  automatable: boolean
+  recheck_days: integer
+  ccpa_compliant: boolean
+  gdpr_compliant: boolean
+  notes: string
