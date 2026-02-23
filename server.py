@@ -147,5 +147,15 @@ def footprint_social_audit(person_id: int = 1) -> str:
     return do_social_audit(person_id=person_id, db=db)
 
 
+# --- Phase 5: Scheduling tools ---
+
+from digital_footprint.tools.schedule_tools import do_schedule_status
+
+@mcp.tool()
+def footprint_schedule_status() -> str:
+    """View scheduler status: last run times, next due dates, and recent job history."""
+    return do_schedule_status(db)
+
+
 if __name__ == "__main__":
     mcp.run()
