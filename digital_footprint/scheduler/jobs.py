@@ -13,6 +13,7 @@ from digital_footprint.db import Database
 from digital_footprint.scanners.breach_scanner import scan_breaches
 from digital_footprint.monitors.dark_web_monitor import run_dark_web_scan
 from digital_footprint.reporters.exposure_report import generate_exposure_report
+from digital_footprint.pipeline.alerter import check_and_alert
 
 logger = logging.getLogger("digital_footprint.scheduler")
 
@@ -64,6 +65,15 @@ def job_breach_recheck(db: Database, config: Config) -> JobResult:
             details={"persons_checked": 0, "new_breaches": 0},
         )
 
+    previous_total = 0  # First run baseline
+    last_run = db.get_last_run("breach_recheck")
+    if last_run and last_run.get("details"):
+        try:
+            prev_details = json.loads(last_run["details"]) if isinstance(last_run["details"], str) else last_run["details"]
+            previous_total = prev_details.get("new_breaches", 0)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     total_new = 0
     for person in persons_with_email:
         email = person.emails[0]
@@ -76,6 +86,16 @@ def job_breach_recheck(db: Database, config: Config) -> JobResult:
             total_new += results.get("total", 0)
         except Exception as e:
             logger.error(f"Breach check failed for {email}: {e}")
+
+    # Alert if new findings
+    for person in persons_with_email:
+        check_and_alert(
+            job_name="breach_recheck",
+            new_count=total_new,
+            previous_count=previous_total,
+            person_name=person.name,
+            config=config,
+        )
 
     return JobResult(
         job_name="breach_recheck",
@@ -101,6 +121,15 @@ def job_dark_web_monitor(db: Database, config: Config) -> JobResult:
             details={"persons_checked": 0, "total_findings": 0},
         )
 
+    previous_total = 0
+    last_run = db.get_last_run("dark_web_monitor")
+    if last_run and last_run.get("details"):
+        try:
+            prev_details = json.loads(last_run["details"]) if isinstance(last_run["details"], str) else last_run["details"]
+            previous_total = prev_details.get("total_findings", 0)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     total_findings = 0
     for person in persons_with_email:
         email = person.emails[0]
@@ -109,6 +138,16 @@ def job_dark_web_monitor(db: Database, config: Config) -> JobResult:
             total_findings += results.get("total", 0)
         except Exception as e:
             logger.error(f"Dark web scan failed for {email}: {e}")
+
+    # Alert if new findings
+    for person in persons_with_email:
+        check_and_alert(
+            job_name="dark_web_monitor",
+            new_count=total_findings,
+            previous_count=previous_total,
+            person_name=person.name,
+            config=config,
+        )
 
     return JobResult(
         job_name="dark_web_monitor",
