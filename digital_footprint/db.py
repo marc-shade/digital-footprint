@@ -114,6 +114,21 @@ CREATE TABLE IF NOT EXISTS scheduled_runs (
     error TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_scheduled_runs_job ON scheduled_runs(job_name);
+
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id INTEGER NOT NULL REFERENCES persons(id),
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    status TEXT DEFAULT 'running',
+    breaches_found INTEGER DEFAULT 0,
+    dark_web_findings INTEGER DEFAULT 0,
+    accounts_found INTEGER DEFAULT 0,
+    removals_submitted INTEGER DEFAULT 0,
+    risk_score INTEGER DEFAULT 0,
+    report_path TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_person ON pipeline_runs(person_id);
 """
 
 
@@ -372,6 +387,37 @@ class Database:
         rows = self.conn.execute(
             "SELECT * FROM scheduled_runs ORDER BY started_at DESC LIMIT ?",
             (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    # --- Pipeline run operations ---
+
+    def insert_pipeline_run(self, person_id: int, started_at: str) -> int:
+        cursor = self.conn.execute(
+            "INSERT INTO pipeline_runs (person_id, started_at) VALUES (?, ?)",
+            (person_id, started_at),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_pipeline_run(self, run_id: int) -> dict | None:
+        row = self.conn.execute("SELECT * FROM pipeline_runs WHERE id = ?", (run_id,)).fetchone()
+        return dict(row) if row else None
+
+    def update_pipeline_run(self, run_id: int, **kwargs) -> None:
+        sets = []
+        values = []
+        for key, value in kwargs.items():
+            sets.append(f"{key} = ?")
+            values.append(value)
+        values.append(run_id)
+        self.conn.execute(f"UPDATE pipeline_runs SET {', '.join(sets)} WHERE id = ?", values)
+        self.conn.commit()
+
+    def get_pipeline_runs(self, person_id: int) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM pipeline_runs WHERE person_id = ? ORDER BY started_at DESC",
+            (person_id,),
         ).fetchall()
         return [dict(r) for r in rows]
 
