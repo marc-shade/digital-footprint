@@ -157,5 +157,15 @@ def footprint_schedule_status() -> str:
     return do_schedule_status(db)
 
 
+# --- Phase 6: Pipeline tools ---
+
+from digital_footprint.tools.pipeline_tools import do_protect
+
+@mcp.tool()
+def footprint_protect(person_id: int = 1) -> str:
+    """Run full protection pipeline: scan, remove, monitor, report. The one command to protect a person."""
+    return do_protect(person_id=person_id, db=db, config=config)
+
+
 if __name__ == "__main__":
     mcp.run()
