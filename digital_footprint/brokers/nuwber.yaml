@@ -1,0 +1,29 @@
+name: Nuwber
+url: https://nuwber.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://nuwber.com/removal/link
+  email: support@nuwber.com
+  steps:
+    - Search for your profile on nuwber.com
+    - Copy the full URL of your profile
+    - Go to nuwber.com/removal/link
+    - Paste your profile URL
+    - Enter your email address
+    - Submit the removal request
+    - Check email for confirmation
+    - Click the confirmation link
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "If the web form does not work, email support@nuwber.com with the profile URL and request removal."

@@ -1,0 +1,26 @@
+name: SearchPeopleFree
+url: https://www.searchpeoplefree.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://www.searchpeoplefree.com/opt-out
+  steps:
+    - Go to searchpeoplefree.com/opt-out
+    - Enter your first name, last name, and state
+    - Find your listing in the results
+    - Click the opt-out button next to your record
+    - Complete the CAPTCHA if prompted
+    - Confirm the removal
+  captcha: true
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Free people search aggregator. Records often reappear from public data sources."

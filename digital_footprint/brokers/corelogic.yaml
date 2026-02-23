@@ -1,0 +1,27 @@
+name: CoreLogic
+url: https://www.corelogic.com
+category: property
+
+opt_out:
+  method: web_form
+  url: https://www.corelogic.com/ccpa
+  email: dataprivacy@corelogic.com
+  steps:
+    - Go to corelogic.com/ccpa
+    - Click Do Not Sell or Share My Personal Information
+    - Fill out the data privacy request form
+    - Submit the request
+    - Alternatively email dataprivacy@corelogic.com with your removal request
+    - Phone 1-800-634-4149 for assistance
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "30 days"
+
+automatable: false
+difficulty: hard
+recheck_days: 90
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Rebranded to Cotality. Primarily property and real estate data. CCPA opt-out may have limited eligibility. Phone: 1-800-634-4149. Email: dataprivacy@corelogic.com."

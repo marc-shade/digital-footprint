@@ -1,0 +1,26 @@
+name: Epsilon
+url: https://www.epsilon.com
+category: marketing
+
+opt_out:
+  method: web_form
+  url: https://legal.epsilon.com/dsr/
+  steps:
+    - Go to legal.epsilon.com/dsr/
+    - Select your privacy request type (opt-out, access, or deletion)
+    - Fill out the Consumer Privacy Request Form
+    - Provide your full name and mailing address
+    - Submit the request
+    - Processing takes approximately 14 days
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "14 days"
+
+automatable: false
+difficulty: hard
+recheck_days: 60
+
+ccpa_compliant: true
+gdpr_compliant: true
+notes: "Epsilon marks data as Do Not Share but does not fully delete it. One of the largest marketing data companies. Phone: (866) 267-3861."

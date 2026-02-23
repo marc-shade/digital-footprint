@@ -1,0 +1,25 @@
+name: PropertyRecs
+url: https://www.propertyrecs.com
+category: property
+
+opt_out:
+  method: web_form
+  url: https://dashboard.propertyrecs.com/opt-out
+  steps:
+    - Go to dashboard.propertyrecs.com/opt-out
+    - Search for your property or name
+    - Find your record in the results
+    - Click the opt-out button
+    - Confirm the removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Property records search engine. Aggregates public property data including ownership, tax records, and home values."

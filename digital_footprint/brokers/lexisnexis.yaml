@@ -1,0 +1,26 @@
+name: LexisNexis
+url: https://www.lexisnexis.com
+category: marketing
+
+opt_out:
+  method: web_form
+  url: https://optout.lexisnexis.com/
+  steps:
+    - Go to optout.lexisnexis.com
+    - Select your reason for requesting suppression
+    - Provide required personal information
+    - Submit documentation if required (for identity theft or risk of harm)
+    - Submit the opt-out request
+    - Processing takes up to 30 days
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "30 days"
+
+automatable: false
+difficulty: hard
+recheck_days: 90
+
+ccpa_compliant: true
+gdpr_compliant: true
+notes: "Major legal and data analytics company. Suppression requests may require documentation for certain categories. Full deletion may not be possible for legal/compliance data."

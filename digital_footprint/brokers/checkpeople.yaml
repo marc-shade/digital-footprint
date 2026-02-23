@@ -1,0 +1,26 @@
+name: CheckPeople
+url: https://www.checkpeople.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://www.checkpeople.com/opt-out
+  steps:
+    - Go to checkpeople.com/opt-out
+    - Enter your full legal name
+    - Enter your date of birth
+    - Find your record in the results
+    - Select the record to remove
+    - Confirm the opt-out request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Requires full legal name and date of birth for opt-out. Straightforward process."

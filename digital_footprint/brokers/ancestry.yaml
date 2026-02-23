@@ -1,0 +1,26 @@
+name: Ancestry.com
+url: https://www.ancestry.com
+category: genealogy
+
+opt_out:
+  method: email
+  url: https://support.ancestry.com/s/contactsupport
+  email: privacy@ancestry.com
+  steps:
+    - Email privacy@ancestry.com with your removal request
+    - Include your full name, email address, and URLs of records to remove
+    - For account data, log in and go to Account Settings to delete your account
+    - Alternatively use support.ancestry.com/s/contactsupport to submit a request
+    - Ancestry will process the request within 30 days
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "30 days"
+
+automatable: false
+difficulty: hard
+recheck_days: 90
+
+ccpa_compliant: true
+gdpr_compliant: true
+notes: "Largest genealogy platform. Historical records cannot be fully removed. Account deletion removes user-submitted data but not public records. Email privacy@ancestry.com."

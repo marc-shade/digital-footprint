@@ -1,0 +1,26 @@
+name: Classmates.com
+url: https://www.classmates.com
+category: social_aggregator
+
+opt_out:
+  method: web_form
+  url: https://www.classmates.com/sp/cancel
+  steps:
+    - Log in to your Classmates.com account
+    - Go to Account Settings
+    - Navigate to Membership/Cancel section
+    - Cancel your membership if you have one
+    - For data deletion, email support@classmates.com
+    - Request full account and data deletion
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "7-14 days"
+
+automatable: false
+difficulty: medium
+recheck_days: 60
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Requires account login to cancel. If you don't have an account, your yearbook photos may still appear. Email support@classmates.com for removal."

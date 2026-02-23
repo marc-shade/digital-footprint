@@ -1,0 +1,27 @@
+name: InfoTracer
+url: https://infotracer.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://infotracer.com/optout/
+  steps:
+    - Go to infotracer.com/optout/
+    - Enter your first name, last name, and state
+    - Find your record in the results
+    - Click the opt-out button
+    - Enter your email address
+    - Complete the CAPTCHA if prompted
+    - Confirm the removal request
+  captcha: true
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Also accepts removal requests by fax at 617-933-9946. Mail opt-out form available on website."

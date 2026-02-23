@@ -1,0 +1,29 @@
+name: Radaris
+url: https://radaris.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://radaris.com/control/privacy
+  email: customer-service@radaris.com
+  steps:
+    - Go to radaris.com/control/privacy
+    - Search for your name and location
+    - Find your profile in the results
+    - Click on your profile
+    - Select the removal option
+    - Enter your email and reason for removal
+    - Check email for confirmation
+    - Click the confirmation link
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "24-48 hours"
+
+automatable: true
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Has detailed profiles including relatives, associates, and property records. May need to create account. Email customer-service@radaris.com if web form fails."

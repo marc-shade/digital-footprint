@@ -1,0 +1,29 @@
+name: Social Catfish
+url: https://socialcatfish.com
+category: social_aggregator
+
+opt_out:
+  method: web_form
+  url: https://socialcatfish.com/opt-out/
+  steps:
+    - Go to socialcatfish.com/opt-out/
+    - Enter your first name, last name, and state
+    - Find your listing in the results
+    - Copy the URL of your listing
+    - Paste the URL into the opt-out form
+    - Enter your email address
+    - Submit the opt-out request
+    - Check email for confirmation link
+    - Click the confirmation link
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Reverse image and identity search engine. Also searches social media and dating profiles."

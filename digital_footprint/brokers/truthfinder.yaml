@@ -1,0 +1,29 @@
+name: TruthFinder
+url: https://www.truthfinder.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://suppression.peopleconnect.us/login
+  steps:
+    - Go to truthfinder.com and scroll to footer
+    - Click Exercise My Data Privacy Rights
+    - Click View Public Data Tools
+    - Click Manage My Suppression Rules
+    - You will be redirected to PeopleConnect suppression center
+    - Create an account or log in
+    - Search for your record
+    - Select and suppress your listing
+    - Confirm suppression
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "48 hours"
+
+automatable: false
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Part of PeopleConnect network. Opt-out cascades to other PeopleConnect properties. Clear browser cache after opt-out."

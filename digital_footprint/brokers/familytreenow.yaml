@@ -1,0 +1,25 @@
+name: FamilyTreeNow
+url: https://www.familytreenow.com
+category: genealogy
+
+opt_out:
+  method: web_form
+  url: https://www.familytreenow.com/optout
+  steps:
+    - Go to familytreenow.com/optout
+    - Search for your name and state
+    - Find your record in the results
+    - Click the opt-out button
+    - Confirm the removal
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-48 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Free genealogy and people search site. Exposes detailed family connections and addresses. Quick opt-out process."

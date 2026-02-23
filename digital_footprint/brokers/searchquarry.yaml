@@ -1,0 +1,27 @@
+name: SearchQuarry
+url: https://www.searchquarry.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://members.searchquarry.com/removeMyData/
+  steps:
+    - Go to members.searchquarry.com/removeMyData/
+    - Enter your first name, last name, and state
+    - Find your record in the results
+    - Select the record to remove
+    - Enter your email address
+    - Check email for confirmation link
+    - Click the confirmation link to complete removal
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "48-72 hours"
+
+automatable: true
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Email confirmation required. Records may take up to 72 hours to be fully removed."

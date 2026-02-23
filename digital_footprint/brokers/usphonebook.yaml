@@ -1,0 +1,26 @@
+name: USPhoneBook
+url: https://www.usphonebook.com
+category: reverse_lookup
+
+opt_out:
+  method: web_form
+  url: https://www.usphonebook.com/opt-out
+  steps:
+    - Go to usphonebook.com/opt-out
+    - Search for your record by name or phone number
+    - Find your listing
+    - Click the opt-out button
+    - Confirm your identity
+    - Submit the removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Reverse phone lookup service. Lists names, addresses, and phone numbers from public records."

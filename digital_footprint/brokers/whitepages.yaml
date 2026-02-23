@@ -1,0 +1,27 @@
+name: WhitePages
+url: https://www.whitepages.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://www.whitepages.com/suppression_requests
+  steps:
+    - Go to whitepages.com/suppression_requests
+    - Search for your name and location
+    - Select your listing from the results
+    - Click Remove Me
+    - Enter your phone number for verification
+    - Enter the verification code received via phone
+    - Confirm the removal
+  captcha: false
+  email_verification: false
+  phone_verification: true
+  time_to_removal: "24 hours"
+
+automatable: false
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Phone verification required. Also owns 411.com. Records may reappear from public records sources."

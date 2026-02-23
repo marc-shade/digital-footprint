@@ -1,0 +1,28 @@
+name: Intelius
+url: https://www.intelius.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://suppression.peopleconnect.us/login
+  email: support@mailer.intelius.com
+  steps:
+    - Go to suppression.peopleconnect.us/login
+    - Create an account or log in with your email
+    - Verify your email address
+    - Enter your full name and date of birth
+    - Search for your records
+    - Select records to suppress
+    - Confirm suppression request
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "72 hours"
+
+automatable: false
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Parent company PeopleConnect also owns Addresses.com, Zabasearch, AnyWho, TruthFinder, InstantCheckmate. Opting out may cascade to some subsidiaries. Phone: 1-888-245-1655."
