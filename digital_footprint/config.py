@@ -19,6 +19,7 @@ class Config:
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
+    alert_email: str = ""
 
 
 def get_config() -> Config:
@@ -39,5 +40,6 @@ def get_config() -> Config:
     config.smtp_port = int(os.environ.get("SMTP_PORT", "587"))
     config.smtp_user = os.environ.get("SMTP_USER", "")
     config.smtp_password = os.environ.get("SMTP_PASSWORD", "")
+    config.alert_email = os.environ.get("ALERT_EMAIL", "")
 
     return config
