@@ -1,0 +1,25 @@
+name: That's Them
+url: https://thatsthem.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://thatsthem.com/optout
+  steps:
+    - Go to thatsthem.com/optout
+    - Enter your first name, last name, and city/state
+    - Find your record in the results
+    - Select the record to remove
+    - Confirm the opt-out request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Straightforward opt-out process. No email or phone verification required."

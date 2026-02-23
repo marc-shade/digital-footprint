@@ -1,0 +1,29 @@
+name: Instant Checkmate
+url: https://www.instantcheckmate.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://www.instantcheckmate.com/opt-out/
+  email: support@instantcheckmate.com
+  steps:
+    - Go to instantcheckmate.com/opt-out/
+    - Enter your name to search for your record
+    - Find your listing in the results
+    - Click to start opt-out process
+    - You may be redirected to PeopleConnect suppression center
+    - Enter your email and verify
+    - Complete the suppression form
+    - Confirm removal
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "48 hours"
+
+automatable: false
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Part of PeopleConnect network. Can also email support@instantcheckmate.com with full name, DOB, address, and listing URL."

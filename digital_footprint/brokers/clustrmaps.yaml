@@ -1,0 +1,26 @@
+name: ClustrMaps
+url: https://clustrmaps.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://clustrmaps.com/bl/opt-out
+  steps:
+    - Go to clustrmaps.com/bl/opt-out
+    - Search for your name
+    - Find your listing in the results
+    - Click the opt-out link next to your record
+    - Complete the opt-out form
+    - Submit the request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Aggregates public records and builds people profiles with addresses and phone numbers."

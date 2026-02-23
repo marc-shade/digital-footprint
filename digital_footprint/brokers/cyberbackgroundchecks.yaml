@@ -1,0 +1,26 @@
+name: Cyber Background Checks
+url: https://www.cyberbackgroundchecks.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://www.cyberbackgroundchecks.com/removal
+  steps:
+    - Go to cyberbackgroundchecks.com/removal
+    - Search for your name and state
+    - Find your listing in the results
+    - Click the removal/opt-out button
+    - Confirm your identity
+    - Submit the removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Public records aggregator. Simple removal process."

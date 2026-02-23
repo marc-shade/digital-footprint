@@ -1,0 +1,25 @@
+name: Smart Background Checks
+url: https://www.smartbackgroundchecks.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://www.smartbackgroundchecks.com/optout
+  steps:
+    - Go to smartbackgroundchecks.com/optout
+    - Enter your first name, last name, and state
+    - Find your listing in the results
+    - Click the Remove button
+    - Confirm the removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Straightforward opt-out. No verification steps required."

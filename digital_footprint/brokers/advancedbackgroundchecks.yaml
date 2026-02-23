@@ -1,0 +1,25 @@
+name: Advanced Background Checks
+url: https://www.advancedbackgroundchecks.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://www.advancedbackgroundchecks.com/removal
+  steps:
+    - Go to advancedbackgroundchecks.com/removal
+    - Search for your name and state
+    - Find your listing in the results
+    - Click the opt-out/removal button
+    - Confirm the removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Aggregates public records for background checks. Straightforward removal process."

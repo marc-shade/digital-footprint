@@ -1,0 +1,25 @@
+name: County Assessor Records
+url: https://www.usa.gov/local-governments
+category: property
+
+opt_out:
+  method: mail
+  steps:
+    - Identify your county assessor's office via usa.gov/local-governments
+    - Contact the assessor's office by phone or in person
+    - Request to have your name/address redacted from online property records
+    - Some counties offer address confidentiality programs for domestic violence victims
+    - Submit any required forms with identity verification
+    - Eligibility varies by state and county
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "30-90 days"
+
+automatable: false
+difficulty: manual
+recheck_days: 365
+
+ccpa_compliant: false
+gdpr_compliant: false
+notes: "Government records. Opt-out varies by jurisdiction. Many counties do not offer online opt-out. Address confidentiality programs may be available for at-risk individuals. This is a template - must be customized per county."

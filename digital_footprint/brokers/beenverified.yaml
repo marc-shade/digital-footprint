@@ -1,0 +1,27 @@
+name: BeenVerified
+url: https://www.beenverified.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://www.beenverified.com/app/optout/search
+  steps:
+    - Go to beenverified.com/app/optout/search
+    - Enter your first name, last name, and state
+    - Find your listing from the results
+    - Click your record to begin the opt-out process
+    - Enter your email address
+    - Check email for verification link
+    - Click the verification link to confirm removal
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "24 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Also owns PeopleLooker and PeopleSmart. Opt-out from BeenVerified may not cascade to subsidiaries."

@@ -1,0 +1,26 @@
+name: FastPeopleSearch
+url: https://www.fastpeoplesearch.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://www.fastpeoplesearch.com/optout
+  steps:
+    - Go to fastpeoplesearch.com/optout
+    - Search for your name and city/state
+    - Find your record in the results
+    - Click the Free Opt Out button next to your record
+    - Complete the CAPTCHA
+    - Confirm removal request
+  captcha: true
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-48 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 14
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "High volume people search site. Frequently recrawls public records. Check back after 2 weeks."

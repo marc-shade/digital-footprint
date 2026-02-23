@@ -1,0 +1,25 @@
+name: Oracle Data Cloud
+url: https://www.oracle.com/data-cloud/
+category: marketing
+
+opt_out:
+  method: web_form
+  url: https://datacloudoptout.oracle.com/
+  steps:
+    - Go to datacloudoptout.oracle.com
+    - Select the type of opt-out you want
+    - Fill out the required form fields
+    - Submit your opt-out request
+    - Oracle will process the request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "30 days"
+
+automatable: false
+difficulty: hard
+recheck_days: 90
+
+ccpa_compliant: true
+gdpr_compliant: true
+notes: "Oracle collects consumer data for targeted advertising. Opt-out covers Oracle Data Cloud marketing products. Enterprise-scale data broker."

@@ -1,0 +1,26 @@
+name: TruePeopleSearch
+url: https://www.truepeoplesearch.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://www.truepeoplesearch.com/removal
+  steps:
+    - Go to truepeoplesearch.com/removal
+    - Search for your name and state
+    - Find your record in the results
+    - Click the Remove This Record button
+    - Complete the CAPTCHA verification
+    - Confirm removal
+  captcha: true
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 14
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "One of the most common people search sites. No account required. Records frequently reappear."

@@ -1,0 +1,27 @@
+name: Addresses.com
+url: https://www.addresses.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://suppression.peopleconnect.us/login
+  steps:
+    - Go to suppression.peopleconnect.us/login
+    - Create an account or log in with your email
+    - Verify your email
+    - Search for your name and date of birth
+    - Select your listing from Addresses.com
+    - Choose to suppress your record
+    - Confirm the suppression
+  captcha: false
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "72 hours"
+
+automatable: false
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Owned by PeopleConnect (Intelius parent). Uses same suppression system as Intelius, AnyWho, Zabasearch."

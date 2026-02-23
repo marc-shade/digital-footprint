@@ -1,0 +1,25 @@
+name: Rehold
+url: https://rehold.com
+category: property
+
+opt_out:
+  method: web_form
+  url: https://rehold.com
+  steps:
+    - Go to rehold.com
+    - Search for your property address
+    - Find your property record
+    - Click the red Remove button on the property page
+    - Confirm the removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Property data aggregator showing ownership, tax info, and home values. Removal button is directly on the property page."

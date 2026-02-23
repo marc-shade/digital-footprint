@@ -1,0 +1,26 @@
+name: SpyFly
+url: https://www.spyfly.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://www.spyfly.com/help-center/remove-my-public-record
+  email: support@spyfly.com
+  steps:
+    - Go to spyfly.com/help-center/remove-my-public-record
+    - Fill out the removal request form
+    - Provide your full name and identifying information
+    - Submit the request
+    - Alternatively email support@spyfly.com with your removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "3-7 days"
+
+automatable: false
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Can also email support@spyfly.com directly for removal requests."

@@ -1,0 +1,25 @@
+name: PrivateEye
+url: https://www.privateeye.com
+category: background_check
+
+opt_out:
+  method: web_form
+  url: https://www.privateeye.com/removal
+  steps:
+    - Go to privateeye.com/removal
+    - Search for your name and state
+    - Find your listing in the results
+    - Click the removal button
+    - Confirm the removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Public records search engine. Straightforward removal process."

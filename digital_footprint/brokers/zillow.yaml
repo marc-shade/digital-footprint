@@ -1,0 +1,26 @@
+name: Zillow
+url: https://www.zillow.com
+category: property
+
+opt_out:
+  method: web_form
+  url: https://privacy.zillowgroup.com/
+  email: privacy@zillow.com
+  steps:
+    - Go to privacy.zillowgroup.com
+    - Click Delete Your Data button
+    - Log in to your Zillow account to verify identity
+    - Confirm the data deletion request
+    - Alternatively email privacy@zillow.com with your name and removal request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "1-3 days"
+
+automatable: false
+difficulty: medium
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Removes personal data from account but property data comes from public records and will reappear. Does not remove property listing details. Email: privacy@zillow.com."

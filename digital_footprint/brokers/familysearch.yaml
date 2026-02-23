@@ -1,0 +1,25 @@
+name: FamilySearch
+url: https://www.familysearch.org
+category: genealogy
+
+opt_out:
+  method: web_form
+  url: https://submit-irm.trustarc.com/services/validation/6be498ba-34b5-42fd-8a5c-d13e3c0f41db
+  steps:
+    - Go to the FamilySearch privacy form via TrustArc
+    - Submit your request with URLs of specific historical records
+    - Provide your full name and contact information
+    - Explain which records you want removed or restricted
+    - FamilySearch will review and process the request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "14-30 days"
+
+automatable: false
+difficulty: hard
+recheck_days: 90
+
+ccpa_compliant: true
+gdpr_compliant: true
+notes: "Operated by The Church of Jesus Christ of Latter-day Saints. Contains extensive genealogy records. Removal of historical records is limited. Living persons' data is restricted by default."

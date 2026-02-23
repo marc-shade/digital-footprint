@@ -1,0 +1,29 @@
+name: PeopleFinder
+url: https://www.peoplefinders.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://www.peoplefinders.com/opt-out
+  steps:
+    - Search for your profile on peoplefinders.com
+    - Copy your profile URL
+    - Go to peoplefinders.com/opt-out
+    - Paste your profile URL into the form
+    - Enter your full name and email address
+    - Complete the CAPTCHA
+    - Click Send Request
+    - Check email for verification link
+    - Click the verification link to confirm removal
+  captcha: true
+  email_verification: true
+  phone_verification: false
+  time_to_removal: "24-48 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "One of the largest people search engines. May have multiple listings per person under name variations."

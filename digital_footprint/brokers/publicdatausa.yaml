@@ -1,0 +1,26 @@
+name: PublicDataUSA
+url: https://www.publicdatausa.com
+category: public_records
+
+opt_out:
+  method: web_form
+  url: https://publicdatausa.com/remove.php
+  steps:
+    - Search for your profile on publicdatausa.com
+    - Copy the full URL of your search result
+    - Go to publicdatausa.com/remove.php
+    - Paste the URL of your record
+    - Complete the opt-out form
+    - Submit the request
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "24-72 hours"
+
+automatable: true
+difficulty: easy
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Aggregates public records data. Straightforward removal process."

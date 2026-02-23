@@ -1,0 +1,26 @@
+name: MyLife
+url: https://www.mylife.com
+category: people_search
+
+opt_out:
+  method: web_form
+  url: https://www.mylife.com/ccpa/index.pubview
+  email: privacy@mylife.com
+  steps:
+    - Go to mylife.com/ccpa/index.pubview
+    - Enter your first name, last name, state, and date of birth
+    - Submit the form
+    - Alternatively email privacy@mylife.com with your full name and request removal
+    - If you have an account, you may need to call 1-888-704-1900 to cancel membership first
+  captcha: false
+  email_verification: false
+  phone_verification: false
+  time_to_removal: "7-14 days"
+
+automatable: false
+difficulty: hard
+recheck_days: 30
+
+ccpa_compliant: true
+gdpr_compliant: false
+notes: "Known for aggressive upselling and reputation scores. May require calling to fully remove. Phone: 1-888-704-1900."
