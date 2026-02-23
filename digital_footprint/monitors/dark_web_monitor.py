@@ -1,16 +1,29 @@
 """Dark web monitoring orchestrator combining paste, Ahmia, and holehe scanners."""
 
+import logging
 from typing import Optional
 
 from digital_footprint.scanners.dark_web_scanner import check_hibp_pastes, search_ahmia
 from digital_footprint.scanners.holehe_scanner import check_email_registrations
 
+logger = logging.getLogger("digital_footprint.monitors")
+
 
 async def run_dark_web_scan(email: str, hibp_api_key: Optional[str] = None) -> dict:
     """Run all dark web monitoring scans for an email."""
     pastes = await check_hibp_pastes(email, api_key=hibp_api_key)
-    ahmia_results = await search_ahmia(email)
-    holehe_results = await check_email_registrations(email)
+
+    try:
+        ahmia_results = await search_ahmia(email)
+    except Exception as e:
+        logger.warning(f"Ahmia search failed for {email}: {e}")
+        ahmia_results = []
+
+    try:
+        holehe_results = await check_email_registrations(email)
+    except Exception as e:
+        logger.warning(f"Holehe check failed for {email}: {e}")
+        holehe_results = []
 
     return {
         "email": email,
