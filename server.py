@@ -102,17 +102,35 @@ def footprint_broker_check(broker_slug: str, person_id: int = 1) -> str:
     return "Broker scanning requires Playwright. Use footprint_scan for a full scan, or run the /exposure skill."
 
 
-# --- Stub tools for future phases ---
+# --- Phase 3: Removal tools ---
+
+from digital_footprint.tools.removal_tools import do_broker_remove, do_removal_status, do_verify_removals
 
 @mcp.tool()
 def footprint_broker_remove(broker_slug: str, person_id: int = 1) -> str:
-    """Submit a removal request to a specific data broker. [Phase 3 - Not yet implemented]"""
-    return "Removal engine not yet implemented. Coming in Phase 3."
+    """Submit a removal request to a specific data broker."""
+    return do_broker_remove(
+        broker_slug=broker_slug,
+        person_id=person_id,
+        db=db,
+        smtp_host=config.smtp_host,
+        smtp_port=config.smtp_port,
+        smtp_user=config.smtp_user,
+        smtp_password=config.smtp_password,
+    )
 
 @mcp.tool()
 def footprint_removal_status(person_id: int = None) -> str:
-    """Get status of all pending removal requests. [Phase 3 - Not yet implemented]"""
-    return "Removal tracking not yet implemented. Coming in Phase 3."
+    """Get status of all pending removal requests."""
+    return do_removal_status(person_id=person_id or 1, db=db)
+
+@mcp.tool()
+def footprint_verify_removals(person_id: int = 1) -> str:
+    """Verify submitted removal requests by re-scanning broker sites."""
+    return do_verify_removals(person_id=person_id, db=db)
+
+
+# --- Stub tools for future phases ---
 
 @mcp.tool()
 def footprint_dark_web_monitor(email: str = None) -> str:
