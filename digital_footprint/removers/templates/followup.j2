@@ -1,0 +1,31 @@
+Subject: FOLLOW-UP: Data Deletion Request - {{ person.name }} [Ref: {{ reference_id }}]
+
+To the Privacy Team at {{ broker.name }},
+
+On {{ original_date }}, I submitted a data deletion request (Reference:
+{{ reference_id }}). More than {{ days_elapsed }} days have passed and I have
+not received confirmation that my data has been deleted.
+
+Under applicable privacy law{% if person.state == 'California' %} (CCPA, Cal. Civ.
+Code Section 1798.105){% endif %}, you are required to respond to deletion requests
+within 45 calendar days.
+
+This is a formal follow-up. If I do not receive confirmation of deletion within
+10 business days of this message, I will:
+
+1. File a complaint with the {% if person.state == 'California' %}California Attorney
+General{% else %}relevant state attorney general{% endif %}
+2. File a complaint with the FTC
+3. Document this non-compliance for potential legal action
+
+Original request details:
+- Date submitted: {{ original_date }}
+- Reference ID: {{ reference_id }}
+- Requested action: Deletion of all personal information
+
+Full Name: {{ person.name }}
+Email: {{ person.email }}
+
+Sincerely,
+{{ person.name }}
+{{ date }}

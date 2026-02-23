@@ -1,0 +1,26 @@
+Subject: Personal Information Removal Request - {{ person.name }}
+
+To Whom It May Concern at {{ broker.name }},
+
+I am writing to request the removal of my personal information from your website
+and databases.
+
+I have found that {{ broker.name }} ({{ broker.url }}) displays my personal
+information without my consent. I request that you:
+
+1. Remove all listings and profiles containing my personal information
+2. Remove my data from your databases
+3. Ensure my information is not re-added in the future
+
+My information to be removed:
+
+Full Name: {{ person.name }}
+Email: {{ person.email }}
+{% if person.phone %}Phone: {{ person.phone }}
+{% endif %}{% if person.address %}Address: {{ person.address }}
+{% endif %}
+Please confirm removal within 30 days.
+
+Thank you,
+{{ person.name }}
+{{ date }}
