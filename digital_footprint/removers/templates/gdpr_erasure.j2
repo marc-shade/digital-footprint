@@ -1,0 +1,25 @@
+Subject: GDPR Right to Erasure Request - {{ person.name }} [Ref: {{ reference_id }}]
+
+To the Data Protection Officer at {{ broker.name }},
+
+I am writing to exercise my right to erasure (right to be forgotten) under
+Article 17 of the General Data Protection Regulation (GDPR).
+
+I request that you erase all personal data you hold about me without undue delay.
+This includes but is not limited to: name, address, phone number, email, employment
+information, family relationships, and any derived or aggregated data.
+
+My identifying information:
+
+Full Name: {{ person.name }}
+Email Address: {{ person.email }}
+{% if person.phone %}Phone Number: {{ person.phone }}
+{% endif %}
+Under GDPR Article 17, you must respond within one month (30 days). If you require
+additional information to verify my identity, please contact me promptly.
+
+Reference ID: {{ reference_id }}
+
+Regards,
+{{ person.name }}
+{{ date }}

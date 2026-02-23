@@ -1,0 +1,27 @@
+Subject: CCPA Do Not Sell My Personal Information - {{ person.name }} [Ref: {{ reference_id }}]
+
+To the Privacy Team at {{ broker.name }},
+
+I am exercising my right under the California Consumer Privacy Act (CCPA),
+Cal. Civ. Code Section 1798.120, to opt out of the sale or sharing of my
+personal information.
+
+I direct {{ broker.name }} to:
+1. Stop selling my personal information to third parties immediately
+2. Stop sharing my personal information for cross-context behavioral advertising
+3. Remove my existing listings and profiles from your platform
+
+My identifying information:
+
+Full Name: {{ person.name }}
+Email Address: {{ person.email }}
+{% if person.phone %}Phone Number: {{ person.phone }}
+{% endif %}{% if person.address %}Address: {{ person.address }}
+{% endif %}
+Please confirm this opt-out within 15 business days per CCPA requirements.
+
+Reference ID: {{ reference_id }}
+
+Sincerely,
+{{ person.name }}
+{{ date }}

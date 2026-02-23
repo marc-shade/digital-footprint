@@ -1,0 +1,34 @@
+Subject: CCPA Data Deletion Request - {{ person.name }} [Ref: {{ reference_id }}]
+
+To the Privacy Team at {{ broker.name }},
+
+I am a California resident and I am exercising my right to deletion of my personal
+information under the California Consumer Privacy Act (CCPA), Cal. Civ. Code
+Section 1798.105.
+
+I request that {{ broker.name }} delete all personal information you have collected
+about me. My identifying information is as follows:
+
+Full Name: {{ person.name }}
+Email Address: {{ person.email }}
+{% if person.phone %}Phone Number: {{ person.phone }}
+{% endif %}{% if person.address %}Address: {{ person.address }}
+{% endif %}
+Under the CCPA, you are required to:
+1. Delete my personal information from your records
+2. Direct any service providers to delete my personal information
+3. Confirm completion of this deletion within 45 days
+
+If you cannot verify my identity through the information provided above, please
+contact me at {{ person.email }} to discuss additional verification steps.
+
+Please confirm deletion to this email address. I am tracking this request under
+reference ID {{ reference_id }}.
+
+If this request is not fulfilled within 45 calendar days, I will file a complaint
+with the California Attorney General's office.
+
+Sincerely,
+{{ person.name }}
+{{ person.email }}
+{{ date }}
