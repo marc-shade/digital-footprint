@@ -65,10 +65,13 @@ async def check_hibp(email: str, api_key: Optional[str] = None) -> list[HibpBrea
             params={"truncateResponse": "false"},
         )
 
-    if resp.status_code == 404:
+    if resp.status_code != 200:
         return []
 
     breaches = resp.json()
+    if not isinstance(breaches, list):
+        return []
+
     return [
         HibpBreach(
             name=b["Name"],
