@@ -77,6 +77,26 @@ def test_send_email(mock_smtp_class):
     mock_smtp.send_message.assert_called_once()
 
 
+def test_render_email_with_emails_list():
+    """Ensure templates work when person has 'emails' list instead of 'email' string."""
+    remover = EmailRemover(smtp_host="", smtp_port=587, smtp_user="", smtp_password="")
+    person = {
+        "name": "John Doe",
+        "emails": ["john@example.com", "john2@example.com"],
+        "phones": ["555-123-4567"],
+        "addresses": ["123 Main St"],
+    }
+    subject, body = remover.render_email(person=person, broker=_broker_ctx())
+    assert "john@example.com" in body
+    assert "John Doe" in subject
+
+
+def test_normalize_person_already_singular():
+    person = {"name": "Jane", "email": "jane@test.com", "phone": "555-0000"}
+    normalized = EmailRemover._normalize_person(person)
+    assert normalized["email"] == "jane@test.com"
+
+
 def test_submit_without_smtp_config():
     remover = EmailRemover(smtp_host="", smtp_port=587, smtp_user="", smtp_password="")
     result = remover.submit(person=_person_ctx(), broker=_broker_ctx())

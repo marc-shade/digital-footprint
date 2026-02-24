@@ -28,6 +28,21 @@ class EmailRemover:
             return "gdpr_erasure.j2"
         return "generic_removal.j2"
 
+    @staticmethod
+    def _normalize_person(person: dict) -> dict:
+        """Normalize person dict so templates get singular fields."""
+        p = dict(person)
+        if "email" not in p and "emails" in p:
+            emails = p["emails"]
+            p["email"] = emails[0] if emails else ""
+        if "phone" not in p and "phones" in p:
+            phones = p["phones"]
+            p["phone"] = phones[0] if phones else ""
+        if "address" not in p and "addresses" in p:
+            addrs = p["addresses"]
+            p["address"] = addrs[0] if addrs else ""
+        return p
+
     def render_email(
         self,
         person: dict,
@@ -37,6 +52,7 @@ class EmailRemover:
         if not reference_id:
             reference_id = f"REF-{uuid.uuid4().hex[:8].upper()}"
 
+        person = self._normalize_person(person)
         template_name = self.select_template(broker)
         template = self.env.get_template(template_name)
 
