@@ -19,6 +19,7 @@ def test_config_loads_alert_email_from_env():
 
 
 def test_config_alert_email_defaults_empty():
-    with patch.dict(os.environ, {}, clear=True):
-        config = get_config()
-        assert config.alert_email == ""
+    with patch("digital_footprint.config.load_dotenv"):
+        with patch.dict(os.environ, {}, clear=True):
+            config = get_config()
+            assert config.alert_email == ""

@@ -1,7 +1,10 @@
 """Email registration scanner using holehe CLI."""
 
 import asyncio
+import os
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 
 
 HIGH_RISK_CATEGORIES = {"dating", "adult", "financial", "gambling"}
@@ -23,24 +26,47 @@ class HoleheResult:
         return "low"
 
 
-def parse_holehe_output(stdout: str) -> list[HoleheResult]:
-    """Parse holehe CSV-style stdout output."""
+def parse_holehe_output(text: str) -> list[HoleheResult]:
+    """Parse holehe output (CSV file or legacy CSV stdout).
+
+    Handles two formats:
+    - Holehe CSV file: Name,Domain,Exists,Rate Limit,Others (with header)
+    - Legacy format: service,Used,category
+    """
     results = []
-    for line in stdout.strip().split("\n"):
-        if not line.strip():
+    lines = text.strip().split("\n")
+    if not lines or not lines[0].strip():
+        return results
+
+    # Detect header row
+    first = lines[0].lower().strip()
+    start = 0
+    if first.startswith("name") or first.startswith("service"):
+        start = 1
+
+    for line in lines[start:]:
+        line = line.strip()
+        if not line:
             continue
-        parts = line.strip().split(",")
+        parts = [p.strip() for p in line.split(",")]
         if len(parts) < 2:
             continue
-        service = parts[0].strip()
-        status = parts[1].strip()
-        category = parts[2].strip() if len(parts) > 2 else "other"
-        if status == "Used":
-            results.append(HoleheResult(
-                service=service,
-                exists=True,
-                category=category,
-            ))
+
+        # Holehe CSV: Name,Domain,Exists,Rate Limit,...
+        if len(parts) >= 3 and parts[2].lower() in ("true", "false"):
+            if parts[2].lower() == "true":
+                service = parts[1] if parts[1] else parts[0]
+                results.append(HoleheResult(service=service, exists=True))
+        # Legacy: service,Used/Not Used,category
+        elif parts[1].lower() in ("used", "not used"):
+            if parts[1].lower() == "used":
+                category = parts[2] if len(parts) > 2 else "other"
+                results.append(HoleheResult(
+                    service=parts[0],
+                    exists=True,
+                    category=category,
+                ))
+
     return results
 
 
@@ -49,19 +75,38 @@ async def check_email_registrations(
 ) -> list[HoleheResult]:
     """Check which services an email is registered with using holehe.
 
-    Note: Uses create_subprocess_exec (not shell) for safety - arguments
-    are passed as a list, preventing shell injection.
+    Holehe's --csv flag writes to a file, so we use a temp file and parse it.
     """
+    csv_path = None
     try:
+        csv_path = tempfile.mktemp(suffix=".csv", prefix="holehe_")
         proc = await asyncio.create_subprocess_exec(
             "holehe", email,
-            "--only-used", "--csv",
+            "--only-used", "--csv", csv_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
-        return parse_holehe_output(stdout.decode())
+        try:
+            await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.communicate()
+            return []
+
+        csv_file = Path(csv_path)
+        if not csv_file.exists():
+            return []
+
+        csv_content = csv_file.read_text()
+        return parse_holehe_output(csv_content)
+
     except FileNotFoundError:
         return []
     except Exception:
         return []
+    finally:
+        if csv_path:
+            try:
+                os.unlink(csv_path)
+            except OSError:
+                pass
