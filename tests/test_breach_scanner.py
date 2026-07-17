@@ -10,6 +10,7 @@ from digital_footprint.scanners.breach_scanner import (
     scan_breaches,
     HibpBreach,
     DehashedRecord,
+    BreachCheckError,
 )
 
 
@@ -92,9 +93,37 @@ async def test_check_hibp_not_found():
 
 
 @pytest.mark.asyncio
-async def test_check_hibp_no_api_key():
-    results = await check_hibp("test@example.com", api_key=None)
-    assert results == []
+async def test_check_hibp_no_api_key_raises():
+    # no key -> the result is UNKNOWN, not "no breaches"; must raise so it is
+    # never reported as a clean all-clear
+    with pytest.raises(BreachCheckError):
+        await check_hibp("test@example.com", api_key=None)
+
+
+@pytest.mark.asyncio
+async def test_check_hibp_bad_key_raises():
+    resp = MagicMock(status_code=401)
+    with patch("httpx.AsyncClient.get", new=AsyncMock(return_value=resp)):
+        with pytest.raises(BreachCheckError):
+            await check_hibp("test@example.com", api_key="badkey")
+
+
+@pytest.mark.asyncio
+async def test_check_hibp_404_is_clean():
+    resp = MagicMock(status_code=404)
+    with patch("httpx.AsyncClient.get", new=AsyncMock(return_value=resp)):
+        assert await check_hibp("test@example.com", api_key="goodkey") == []
+
+
+@pytest.mark.asyncio
+async def test_scan_breaches_surfaces_error_not_false_clear():
+    # bad key -> scan_breaches reports checked=False + an error, not "0, clean"
+    resp = MagicMock(status_code=401)
+    with patch("httpx.AsyncClient.get", new=AsyncMock(return_value=resp)):
+        result = await scan_breaches("test@example.com", hibp_api_key="badkey")
+    assert result["checked"] is False
+    assert result["total"] == 0
+    assert any("hibp" in e for e in result["errors"])
 
 
 @pytest.mark.asyncio
