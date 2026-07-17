@@ -2,6 +2,10 @@ name: That's Them
 url: https://thatsthem.com
 category: people_search
 
+# Verified 2026-07-17 against the live site with two common test names
+# ("Results for <name>" page returned). Used by the discovery scanner.
+search_url_pattern: "https://thatsthem.com/name/{first}-{last}"
+
 opt_out:
   method: web_form
   url: https://thatsthem.com/optout

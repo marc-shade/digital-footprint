@@ -31,6 +31,7 @@ class PipelineResult:
     accounts_found: int = 0
     brokers_scanned: int = 0
     brokers_found: int = 0
+    brokers_blocked: int = 0
     removals_submitted: int = 0
     removals_queued: int = 0
     risk_score: int = 0
@@ -151,6 +152,7 @@ def protect_person(
     ]
     first_name, last_name = _split_name(person.name)
     brokers_scanned = 0
+    brokers_blocked = 0
     if scannable and last_name:
         try:
             scan_results = _run_async(scan_all_brokers(
@@ -161,12 +163,15 @@ def protect_person(
             brokers_scanned = len(scan_results)
             for r in scan_results:
                 found = getattr(r, "found", False)
+                if getattr(r, "blocked", False):
+                    brokers_blocked += 1
                 broker_report_results.append({
                     "found": found,
                     "broker_name": getattr(r, "broker_name", ""),
                     "broker_slug": getattr(r, "broker_slug", ""),
                     "url": getattr(r, "url", ""),
                     "risk_level": getattr(r, "risk_level", "low"),
+                    "blocked": getattr(r, "blocked", False),
                 })
                 if found:
                     broker = db.get_broker_by_slug(getattr(r, "broker_slug", ""))
@@ -292,6 +297,7 @@ def protect_person(
         accounts_found=accounts_found,
         brokers_scanned=brokers_scanned,
         brokers_found=brokers_found_count,
+        brokers_blocked=brokers_blocked,
         removals_submitted=removals_submitted,
         removals_queued=removals_queued,
         risk_score=risk_score,

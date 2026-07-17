@@ -15,13 +15,19 @@ Self-hosted personal data removal and privacy protection system. Replicates the 
 - **Alerts** you via email when new threats are detected
 - **Reports** your risk score and full exposure in Markdown reports
 
-> **Two operational notes.** (1) Live opt-out submissions only fire when you
-> opt in (`submit_removals=True`); the default pipeline is a dry run that
-> records intended removals without contacting any broker. (2) Automated
-> *discovery* and post-removal *verification* require a `search_url_pattern`
-> in each broker YAML; most are not populated yet, so those brokers are
-> skipped (logged) until the pattern is added. Blind opt-out submission works
-> without it.
+> **Operational notes.** (1) Live opt-out submissions only fire when you opt
+> in (`submit_removals=True`); the default pipeline is a dry run that records
+> intended removals without contacting any broker. (2) Automated *discovery*
+> and post-removal *verification* require a `search_url_pattern` per broker.
+> 4 are live-verified today (radaris, thatsthem, zabasearch, addresses);
+> the rest are unpopulated and skipped (logged, never reported as clean).
+> (3) Many major people-search sites (Spokeo, FastPeopleSearch,
+> TruePeopleSearch, USPhoneBook, ...) serve **anti-bot challenge pages** to
+> the headless scanner, so they cannot be auto-discovered from a plain IP.
+> The scanner now detects this and reports `blocked` (not a false all-clear);
+> reaching those sites needs residential proxies + CAPTCHA solving, or a real
+> logged-in browser (the Cowork approach). Blind opt-out submission does not
+> need discovery at all.
 
 ## Architecture
 

@@ -2,6 +2,10 @@ name: Addresses.com
 url: https://www.addresses.com
 category: people_search
 
+# Verified 2026-07-17 against the live site with two common test names
+# ("Found N Results for <name>"). Used by the discovery scanner.
+search_url_pattern: "https://www.addresses.com/people/{first}-{last}"
+
 opt_out:
   method: web_form
   url: https://suppression.peopleconnect.us/login

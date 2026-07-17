@@ -268,7 +268,9 @@ def job_verify_removals(db: Database, config: Config) -> JobResult:
             continue
 
         status = result.get("status")
-        if status == "skipped":
+        if status in ("skipped", "unverifiable"):
+            # No search pattern, or the broker served an anti-bot challenge:
+            # listing status is unknown. Do NOT confirm, do NOT escalate.
             unverifiable += 1
             db.update_removal(removal["id"], last_checked_at=now)
             continue

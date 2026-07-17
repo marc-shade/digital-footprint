@@ -32,6 +32,22 @@ class RemovalVerifier:
             last_name=last_name,
         )
 
+        # A blocked/challenged re-scan tells us NOTHING about listing status.
+        # Reporting it as 'confirmed' would be a false all-clear (the worst
+        # failure mode for a privacy tool), so surface it as unverifiable.
+        if getattr(result, "blocked", False) or getattr(result, "status", "") == "blocked":
+            return {
+                "removal_id": removal["id"],
+                "status": "unverifiable",
+                "reason": "broker served an anti-bot challenge; listing status unknown",
+            }
+        if getattr(result, "status", "") == "error":
+            return {
+                "removal_id": removal["id"],
+                "status": "unverifiable",
+                "reason": f"scan error: {result.error}",
+            }
+
         if not result.found:
             return {
                 "removal_id": removal["id"],
