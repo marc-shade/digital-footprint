@@ -89,7 +89,28 @@ ALERT_EMAIL=alerts@yourdomain.com
 
 # Optional: CAPTCHA solving for web form removals
 CAPTCHA_API_KEY=your_2captcha_key
+
+# Optional: encrypt PII at rest (off by default)
+DIGITAL_FOOTPRINT_ENCRYPT=1
 ```
+
+### Encryption at rest
+
+Personal data (names, emails, phones, addresses, dates of birth, finding
+URLs) can be encrypted at rest. It is **off by default** — the database is
+plaintext and logs a warning on open. Turn it on with either:
+
+- `DIGITAL_FOOTPRINT_ENCRYPT=1` — generates and loads a key file next to the
+  DB (`db.key`, `chmod 600`). Keep that file safe; losing it makes the data
+  unrecoverable.
+- `DIGITAL_FOOTPRINT_DB_KEY=<fernet key>` — bring your own key
+  (`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`).
+
+When enabled, PII columns are Fernet-encrypted (AES-128-CBC + HMAC) and the DB
+file shows no personal data to `strings`. This is field-level encryption:
+schema, column names, timestamps and status values remain visible; breach rows
+are pseudonymous (linked only by an integer id). To encrypt an existing
+plaintext database, enable a key and call `Database.migrate_to_encrypted()`.
 
 ### Run the MCP Server
 
@@ -192,7 +213,7 @@ Scores map to labels: **CRITICAL** (75+), **HIGH** (50-74), **MODERATE** (25-49)
 python -m pytest tests/ -v
 ```
 
-272 tests covering all modules. Zero external API calls in tests — all external services are mocked.
+282 tests covering all modules. Zero external API calls in tests — all external services are mocked.
 
 ## External Services
 

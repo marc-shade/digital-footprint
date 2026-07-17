@@ -1,12 +1,19 @@
 """SQLite database manager for Digital Footprint."""
 
+import hashlib
 import json
+import logging
+import os
+import stat
 import sqlite3
 from pathlib import Path
 from typing import Optional
 
 from digital_footprint.config import Config
+from digital_footprint.crypto import Cipher, resolve_key
 from digital_footprint.models import Person, Broker
+
+logger = logging.getLogger("digital_footprint.db")
 
 
 SCHEMA = """
@@ -52,6 +59,10 @@ CREATE TABLE IF NOT EXISTS findings (
     data_found TEXT DEFAULT '{}',
     risk_level TEXT DEFAULT 'medium',
     url TEXT,
+    -- Deterministic hash of (source, broker_id, url) used for de-dup. url is
+    -- PII (broker search URLs embed the person's name) and is encrypted, so a
+    -- direct url comparison can't de-dup; this non-reversible hash can.
+    content_hash TEXT,
     screenshot_path TEXT,
     status TEXT DEFAULT 'active',
     discovered_at TEXT DEFAULT (datetime('now')),
@@ -137,15 +148,62 @@ class Database:
     def __init__(self, config: Config):
         self.config = config
         self.conn: Optional[sqlite3.Connection] = None
+        self.cipher: Optional[Cipher] = None
 
     def initialize(self) -> None:
-        self.config.db_path.parent.mkdir(parents=True, exist_ok=True)
+        is_file_db = str(self.config.db_path) not in (":memory:", "")
+        if is_file_db:
+            self.config.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Resolve the PII encryption key (env key > key file when enabled).
+        key = resolve_key(self.config.encrypt, self.config.resolved_key_path() if is_file_db else self.config.key_path)
+        self.cipher = Cipher(key) if key else None
+        if self.cipher is None:
+            # Fail loud: a privacy tool storing PII in plaintext should say so.
+            logger.warning(
+                "PII encryption at rest is OFF — %s stores personal data in "
+                "plaintext. Enable with DIGITAL_FOOTPRINT_ENCRYPT=1 (or set "
+                "DIGITAL_FOOTPRINT_DB_KEY).", self.config.db_path,
+            )
+
         self.conn = sqlite3.connect(str(self.config.db_path))
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA foreign_keys=ON")
         self.conn.executescript(SCHEMA)
+        self._migrate_schema()
         self.conn.commit()
+
+        # Restrict the DB file (and WAL/SHM siblings) to owner-only.
+        if is_file_db:
+            for suffix in ("", "-wal", "-shm"):
+                p = Path(str(self.config.db_path) + suffix)
+                if p.exists():
+                    try:
+                        os.chmod(p, stat.S_IRUSR | stat.S_IWUSR)
+                    except OSError as e:
+                        # Best-effort hardening (some filesystems reject chmod);
+                        # surface it rather than swallow it silently.
+                        logger.warning("could not chmod 600 %s: %s", p, e)
+
+    def _migrate_schema(self) -> None:
+        """Additive migrations for DBs created before a column existed."""
+        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(findings)")}
+        if "content_hash" not in cols:
+            self.conn.execute("ALTER TABLE findings ADD COLUMN content_hash TEXT")
+
+    # --- PII field encryption helpers ---
+
+    def _enc(self, value: Optional[str]) -> Optional[str]:
+        return self.cipher.encrypt(value) if self.cipher else value
+
+    def _dec(self, value: Optional[str]) -> Optional[str]:
+        return self.cipher.decrypt(value) if self.cipher else value
+
+    @staticmethod
+    def _content_hash(source: str, broker_id, url: Optional[str]) -> str:
+        raw = f"{source}|{broker_id if broker_id is not None else ''}|{url or ''}"
+        return hashlib.sha256(raw.encode()).hexdigest()
 
     def close(self) -> None:
         if self.conn:
@@ -167,13 +225,13 @@ class Database:
         cursor = self.conn.execute(
             "INSERT INTO persons (name, relation, emails, phones, addresses, usernames, date_of_birth) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
-                name,
+                self._enc(name),
                 relation,
-                json.dumps(emails or []),
-                json.dumps(phones or []),
-                json.dumps(addresses or []),
-                json.dumps(usernames or []),
-                date_of_birth,
+                self._enc(json.dumps(emails or [])),
+                self._enc(json.dumps(phones or [])),
+                self._enc(json.dumps(addresses or [])),
+                self._enc(json.dumps(usernames or [])),
+                self._enc(date_of_birth),
             ),
         )
         self.conn.commit()
@@ -190,15 +248,17 @@ class Database:
         return [self._row_to_person(r) for r in rows]
 
     def update_person(self, person_id: int, **kwargs) -> None:
-        json_fields = {"emails", "phones", "addresses", "usernames"}
+        json_pii_fields = {"emails", "phones", "addresses", "usernames"}
+        scalar_pii_fields = {"name", "date_of_birth"}
         sets = []
         values = []
         for key, value in kwargs.items():
-            if key in json_fields:
-                sets.append(f"{key} = ?")
-                values.append(json.dumps(value))
+            sets.append(f"{key} = ?")
+            if key in json_pii_fields:
+                values.append(self._enc(json.dumps(value)))
+            elif key in scalar_pii_fields:
+                values.append(self._enc(value))
             else:
-                sets.append(f"{key} = ?")
                 values.append(value)
         sets.append("updated_at = datetime('now')")
         values.append(person_id)
@@ -208,13 +268,13 @@ class Database:
     def _row_to_person(self, row: sqlite3.Row) -> Person:
         return Person(
             id=row["id"],
-            name=row["name"],
+            name=self._dec(row["name"]),
             relation=row["relation"],
-            emails=json.loads(row["emails"]),
-            phones=json.loads(row["phones"]),
-            addresses=json.loads(row["addresses"]),
-            usernames=json.loads(row["usernames"]),
-            date_of_birth=row["date_of_birth"],
+            emails=json.loads(self._dec(row["emails"]) or "[]"),
+            phones=json.loads(self._dec(row["phones"]) or "[]"),
+            addresses=json.loads(self._dec(row["addresses"]) or "[]"),
+            usernames=json.loads(self._dec(row["usernames"]) or "[]"),
+            date_of_birth=self._dec(row["date_of_birth"]),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
@@ -374,7 +434,8 @@ class Database:
         result = []
         for r in rows:
             d = dict(r)
-            name = (d.get("person_name") or "").strip()
+            name = (self._dec(d.get("person_name")) or "").strip()
+            d["person_name"] = name
             parts = name.split()
             d["person_first_name"] = parts[0] if parts else ""
             d["person_last_name"] = parts[-1] if len(parts) > 1 else ""
@@ -400,28 +461,31 @@ class Database:
         Re-scans re-surface the same listing; without the de-dup the findings
         table would grow unbounded and reports would double-count. An existing
         row is refreshed (updated_at, risk, status) instead of duplicated.
+
+        url is PII (broker search URLs embed the person's name), so it is
+        encrypted and cannot be compared directly; de-dup uses a deterministic
+        content_hash instead.
         """
+        content_hash = self._content_hash(source, broker_id, url)
         existing = self.conn.execute(
-            """SELECT id FROM findings
-               WHERE person_id = ? AND source = ?
-                 AND IFNULL(url, '') = IFNULL(?, '')
-                 AND IFNULL(broker_id, -1) = IFNULL(?, -1)""",
-            (person_id, source, url, broker_id),
+            "SELECT id FROM findings WHERE person_id = ? AND content_hash = ?",
+            (person_id, content_hash),
         ).fetchone()
         if existing:
             self.conn.execute(
                 "UPDATE findings SET risk_level = ?, status = ?, data_found = ?, updated_at = datetime('now') WHERE id = ?",
-                (risk_level, status, json.dumps(data_found or {}), existing["id"]),
+                (risk_level, status, self._enc(json.dumps(data_found or {})), existing["id"]),
             )
             self.conn.commit()
             return existing["id"]
         cursor = self.conn.execute(
             """INSERT INTO findings
-            (person_id, broker_id, source, finding_type, data_found, risk_level, url, screenshot_path, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (person_id, broker_id, source, finding_type, data_found, risk_level, url, content_hash, screenshot_path, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 person_id, broker_id, source, finding_type,
-                json.dumps(data_found or {}), risk_level, url, screenshot_path, status,
+                self._enc(json.dumps(data_found or {})), risk_level,
+                self._enc(url), content_hash, screenshot_path, status,
             ),
         )
         self.conn.commit()
@@ -438,8 +502,9 @@ class Database:
         out = []
         for r in rows:
             d = dict(r)
+            d["url"] = self._dec(d.get("url"))
             try:
-                d["data_found"] = json.loads(d.get("data_found") or "{}")
+                d["data_found"] = json.loads(self._dec(d.get("data_found")) or "{}")
             except (json.JSONDecodeError, TypeError):
                 d["data_found"] = {}
             out.append(d)
@@ -451,6 +516,59 @@ class Database:
             (status, finding_id),
         )
         self.conn.commit()
+
+    # --- Encryption migration ---
+
+    def migrate_to_encrypted(self) -> dict:
+        """Encrypt any plaintext PII already in the DB (persons + findings),
+        in place. Requires encryption to be enabled. Idempotent: values that
+        are already encrypted are skipped, so re-running is safe.
+        """
+        if not self.cipher:
+            raise RuntimeError(
+                "Encryption is not enabled; cannot migrate. Set "
+                "DIGITAL_FOOTPRINT_ENCRYPT=1 or DIGITAL_FOOTPRINT_DB_KEY."
+            )
+        migrated = {"persons": 0, "findings": 0}
+
+        for row in self.conn.execute(
+            "SELECT id, name, emails, phones, addresses, usernames, date_of_birth FROM persons"
+        ).fetchall():
+            updates = {}
+            for col in ("name", "emails", "phones", "addresses", "usernames", "date_of_birth"):
+                v = row[col]
+                if v not in (None, "") and not self.cipher.is_encrypted(v):
+                    updates[col] = self.cipher.encrypt(v)
+            if updates:
+                sets = ", ".join(f"{k} = ?" for k in updates)
+                self.conn.execute(
+                    f"UPDATE persons SET {sets} WHERE id = ?", [*updates.values(), row["id"]]
+                )
+                migrated["persons"] += 1
+
+        for row in self.conn.execute(
+            "SELECT id, source, broker_id, data_found, url, content_hash FROM findings"
+        ).fetchall():
+            updates = {}
+            if row["content_hash"] is None:
+                # content_hash is computed from the PLAINTEXT url.
+                plain_url = row["url"]
+                if self.cipher.is_encrypted(plain_url):
+                    plain_url = self.cipher.decrypt(plain_url)
+                updates["content_hash"] = self._content_hash(row["source"], row["broker_id"], plain_url)
+            for col in ("data_found", "url"):
+                v = row[col]
+                if v not in (None, "") and not self.cipher.is_encrypted(v):
+                    updates[col] = self.cipher.encrypt(v)
+            if updates:
+                sets = ", ".join(f"{k} = ?" for k in updates)
+                self.conn.execute(
+                    f"UPDATE findings SET {sets} WHERE id = ?", [*updates.values(), row["id"]]
+                )
+                migrated["findings"] += 1
+
+        self.conn.commit()
+        return migrated
 
     # --- Breach operations ---
 
