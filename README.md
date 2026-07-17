@@ -140,7 +140,7 @@ Add to your crontab (`crontab -e`):
 0 3 * * * cd /path/to/digital-footprint && /path/to/venv/bin/python scheduler.py >> scheduler.log 2>&1
 ```
 
-This runs breach rechecks (weekly), dark web monitoring (every 3 days), removal verification (daily), confirmation-inbox processing (daily), and report generation (weekly). When a broker still lists you after a removal, the verify job resubmits the opt-out (once), then drafts an FTC / state-AG complaint if it is still ignored — set `DIGITAL_FOOTPRINT_AUTO_RESUBMIT=1` to have it re-send automatically, otherwise it records that a resubmit is due.
+This runs breach rechecks (weekly), dark web monitoring (every 3 days), removal verification (daily), confirmation-inbox processing (daily), re-listing re-checks (weekly), and report generation (weekly). When a broker still lists you after a removal, the verify job resubmits the opt-out (once), then drafts an FTC / state-AG complaint if it is still ignored — set `DIGITAL_FOOTPRINT_AUTO_RESUBMIT=1` to have it re-send automatically, otherwise it records that a resubmit is due. When a broker you'd already cleared re-lists you, the re-listing re-check reopens a fresh removal automatically.
 
 ### Email confirmation loop
 
@@ -224,7 +224,7 @@ Scores map to labels: **CRITICAL** (75+), **HIGH** (50-74), **MODERATE** (25-49)
 python -m pytest tests/ -v
 ```
 
-300 tests covering all modules. Zero external API calls in tests — all external services are mocked.
+304 tests covering all modules. Zero external API calls in tests — all external services are mocked.
 
 ## External Services
 

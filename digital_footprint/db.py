@@ -442,6 +442,38 @@ class Database:
             result.append(d)
         return result
 
+    def get_confirmed_removals_due_recheck(self) -> list[dict]:
+        """Confirmed removals whose last check is older than the broker's
+        recheck window — candidates to re-scan for a re-listing. Enriched with
+        the broker slug/name/search_url_pattern and the person's first/last
+        name so the scanner can run."""
+        rows = self.conn.execute(
+            """
+            SELECT r.*,
+                   b.slug AS broker_slug,
+                   b.name AS broker_name,
+                   b.search_url_pattern AS search_url_pattern,
+                   p.name AS person_name
+            FROM removals r
+            JOIN brokers b ON r.broker_id = b.id
+            JOIN persons p ON r.person_id = p.id
+            WHERE r.status = 'confirmed'
+              AND datetime(IFNULL(r.last_checked_at, r.confirmed_at),
+                           '+' || b.recheck_days || ' days') <= datetime('now')
+            ORDER BY r.id
+            """,
+        ).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            name = (self._dec(d.get("person_name")) or "").strip()
+            d["person_name"] = name
+            parts = name.split()
+            d["person_first_name"] = parts[0] if parts else ""
+            d["person_last_name"] = parts[-1] if len(parts) > 1 else ""
+            result.append(d)
+        return result
+
     def get_removals_for_confirmation(self) -> list[dict]:
         """Submitted removals awaiting an email confirmation, enriched with the
         broker domain and the person's emails so the IMAP monitor can match

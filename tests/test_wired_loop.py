@@ -21,6 +21,7 @@ from digital_footprint.scheduler.jobs import (
     job_verify_removals,
     job_generate_report,
     job_breach_recheck,
+    job_recheck_confirmed,
 )
 
 
@@ -174,6 +175,68 @@ def test_orchestrator_resubmit_creates_no_new_row(tmp_path):
     # not create a duplicate removal row regardless
     RemovalOrchestrator().resubmit(pid, broker.slug, db)
     assert len(db.get_removals_by_person(pid)) == before
+
+
+# --- re-listing -> auto re-removal (P0-6) ---
+
+def _confirmed_removal(db, last_checked="2000-01-01 00:00:00"):
+    pid = db.insert_person("Jane Doe", emails=["j@x.com"])
+    broker = _broker(db)  # recheck_days=30, has search_url_pattern
+    db.insert_removal(person_id=pid, broker_id=broker.id, method="email", status="confirmed")
+    rid = db.get_removals_by_person(pid)[0]["id"]
+    db.update_removal(rid, confirmed_at=last_checked, last_checked_at=last_checked)
+    return pid, broker, rid
+
+
+def _scan(found, blocked=False, status=None, url="https://spokeo.com/jane"):
+    status = status or ("found" if found else "not_found")
+    return type("R", (), {"found": found, "blocked": blocked, "status": status, "url": url})()
+
+
+def test_recheck_reopens_on_relisting(tmp_path):
+    db = _db(tmp_path)
+    pid, broker, rid = _confirmed_removal(db)
+    with patch("digital_footprint.scheduler.jobs.scan_broker", new_callable=AsyncMock) as m:
+        m.return_value = _scan(found=True)
+        result = job_recheck_confirmed(db, Config(db_path=tmp_path / "t.db"))
+    assert result.details["relisted"] == 1
+    assert result.details["reopened"] == 1
+    statuses = sorted(r["status"] for r in db.get_removals_by_person(pid))
+    assert statuses == ["pending", "re_listed"]  # old marked, fresh removal opened
+    relistings = [f for f in db.get_findings_by_person(pid) if f["finding_type"] == "relisting"]
+    assert len(relistings) == 1
+
+
+def test_recheck_keeps_confirmed_when_still_gone(tmp_path):
+    db = _db(tmp_path)
+    pid, broker, rid = _confirmed_removal(db)
+    with patch("digital_footprint.scheduler.jobs.scan_broker", new_callable=AsyncMock) as m:
+        m.return_value = _scan(found=False)
+        result = job_recheck_confirmed(db, Config(db_path=tmp_path / "t.db"))
+    assert result.details["still_gone"] == 1
+    assert result.details["relisted"] == 0
+    assert [r["status"] for r in db.get_removals_by_person(pid)] == ["confirmed"]
+
+
+def test_recheck_blocked_does_not_reopen(tmp_path):
+    db = _db(tmp_path)
+    pid, broker, rid = _confirmed_removal(db)
+    with patch("digital_footprint.scheduler.jobs.scan_broker", new_callable=AsyncMock) as m:
+        m.return_value = _scan(found=False, blocked=True, status="blocked")
+        result = job_recheck_confirmed(db, Config(db_path=tmp_path / "t.db"))
+    assert result.details["unverifiable"] == 1
+    assert result.details["relisted"] == 0
+    assert [r["status"] for r in db.get_removals_by_person(pid)] == ["confirmed"]
+
+
+def test_recheck_skips_recently_confirmed(tmp_path):
+    from datetime import datetime
+    db = _db(tmp_path)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _confirmed_removal(db, last_checked=now)  # within recheck_days -> not due
+    assert db.get_confirmed_removals_due_recheck() == []
+    result = job_recheck_confirmed(db, Config(db_path=tmp_path / "t.db"))
+    assert result.status == "skipped"
 
 
 # --- report job reads persisted findings ---

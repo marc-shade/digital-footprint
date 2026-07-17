@@ -70,6 +70,11 @@ tests/                   # Test suite (262 tests)
   `DIGITAL_FOOTPRINT_AUTO_RESUBMIT=1`; otherwise it records `resubmit_pending`.
   Resubmit re-dispatches via `RemovalOrchestrator.resubmit()` (no new removal
   row); escalation still wins once the attempt threshold is reached.
+- **Re-listing re-removal** (scheduler job `recheck_confirmed`, weekly):
+  re-scans confirmed removals due per the broker's `recheck_days`; on a
+  re-listing it marks the old removal `re_listed`, records a `relisting`
+  finding, and opens a fresh `pending` removal (not auto-submitted). A
+  blocked/errored scan keeps the removal confirmed (never a false re-listing).
 - **Email confirmation loop** (`removers/confirmation.py`, scheduler job
   `process_confirmations`): polls the IMAP inbox, matches "confirm your
   removal" emails to pending removals (by reference id / sender domain /
