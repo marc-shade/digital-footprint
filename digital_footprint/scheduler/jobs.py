@@ -338,7 +338,11 @@ def job_verify_removals(db: Database, config: Config) -> JobResult:
             # when DIGITAL_FOOTPRINT_AUTO_RESUBMIT is on.
             if config.auto_resubmit:
                 try:
-                    res = orchestrator.resubmit(removal["person_id"], removal.get("broker_slug", ""), db)
+                    res = orchestrator.resubmit(
+                        removal["person_id"], removal.get("broker_slug", ""), db,
+                        reference_id=f"REM-{removal['id']}",
+                        original_date=removal.get("submitted_at"),
+                    )
                     if res.get("status") == "submitted":
                         resubmitted += 1
                         db.update_removal(removal["id"], submitted_at=now, notes=f"resubmitted (attempt {attempts})")
