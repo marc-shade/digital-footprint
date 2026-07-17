@@ -192,7 +192,7 @@ Scores map to labels: **CRITICAL** (75+), **HIGH** (50-74), **MODERATE** (25-49)
 python -m pytest tests/ -v
 ```
 
-262 tests covering all modules. Zero external API calls in tests — all external services are mocked.
+272 tests covering all modules. Zero external API calls in tests — all external services are mocked.
 
 ## External Services
 
@@ -206,4 +206,12 @@ python -m pytest tests/ -v
 
 ## License
 
-MIT
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Marc Shade.
+
+## Disclaimer
+
+This is a self-hosted tool for exercising your own data-privacy rights (CCPA,
+GDPR, and similar). Use it only against your own personal information, or on
+behalf of someone who has authorized you. Automated access to third-party
+sites may be subject to their terms of service; you are responsible for how
+you operate it. Provided "as is," without warranty (see LICENSE).

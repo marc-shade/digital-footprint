@@ -13,5 +13,6 @@ dist/
 scheduler.log
 reports/
 
-# Internal planning doc — kept local, not published
+# Internal planning docs — kept local, not published
 PRD.md
+docs/plans/
