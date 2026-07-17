@@ -640,6 +640,29 @@ class Database:
         self.conn.commit()
         return migrated
 
+    # --- Breach check status ---
+
+    def record_breach_check(self, person_id: int, ok: bool) -> None:
+        """Record whether the most recent breach check for a person succeeded,
+        so a report built later can tell 'checked & clean' from 'never verified'."""
+        self.conn.execute(
+            "INSERT INTO scans (person_id, scan_type, completed_at, status) "
+            "VALUES (?, 'breach', datetime('now'), ?)",
+            (person_id, "success" if ok else "failed"),
+        )
+        self.conn.commit()
+
+    def breach_check_ok(self, person_id: int) -> Optional[bool]:
+        """True/False for the latest breach check; None if one never ran."""
+        row = self.conn.execute(
+            "SELECT status FROM scans WHERE person_id = ? AND scan_type = 'breach' "
+            "ORDER BY id DESC LIMIT 1",
+            (person_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return row["status"] == "success"
+
     # --- Breach operations ---
 
     def insert_breach(

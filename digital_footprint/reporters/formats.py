@@ -81,6 +81,8 @@ def build_report_data(
         "risk_label": risk_label(score),
         "brokers": brokers,
         "breaches": breaches,
+        "breach_checked": breach_results.get("checked", True),
+        "breach_errors": breach_results.get("errors", []),
         "accounts": accounts,
         "google_exposure": google,
         "recommendations": recs,
@@ -107,7 +109,12 @@ def render_html(data: dict) -> str:
 
     def breach_items(items):
         if not items:
-            return "<li class='none'>No breach records found.</li>"
+            if data.get("breach_checked", True):
+                return "<li class='none'>No breach records found.</li>"
+            errs = "; ".join(e(str(x)) for x in data.get("breach_errors", []))
+            detail = f" ({errs})" if errs else ""
+            return (f"<li class='warn'><strong>Breach check could not be completed{detail}.</strong> "
+                    "This is NOT an all-clear — configure a valid HIBP API key and re-run.</li>")
         out = []
         for b in items:
             classes = ", ".join(e(str(c)) for c in b.get("data_classes", []))
@@ -131,6 +138,7 @@ def render_html(data: dict) -> str:
  .MODERATE {{ background: #b58900; }} .LOW {{ background: #2e7d32; }}
  h2 {{ font-size: 1.15rem; border-bottom: 1px solid #eee; padding-bottom: .2rem; margin-top: 1.6rem; }}
  ul {{ padding-left: 1.2rem; }} li.none {{ color: #888; list-style: none; margin-left: -1.2rem; }}
+ li.warn {{ color: #b00020; list-style: none; margin-left: -1.2rem; }}
  a {{ color: #1a6fb5; word-break: break-all; }}
 </style></head><body>
 <h1>Digital Footprint Exposure Report</h1>
@@ -188,9 +196,14 @@ def render_pdf(data: dict) -> bytes:
 
     section(f"Data Broker Exposure ({len(data['brokers'])} found)",
             [f"{b['name']}: {b['url']}" for b in data["brokers"]])
-    section(f"Data Breaches ({len(data['breaches'])})",
-            [f"{b['name']} ({b.get('date') or 'unknown'}): {', '.join(b.get('data_classes', []))}"
-             for b in data["breaches"]])
+    breach_lines = [f"{b['name']} ({b.get('date') or 'unknown'}): {', '.join(b.get('data_classes', []))}"
+                    for b in data["breaches"]]
+    if not breach_lines and not data.get("breach_checked", True):
+        errs = "; ".join(str(x) for x in data.get("breach_errors", []))
+        detail = f" ({errs})" if errs else ""
+        breach_lines = [f"Breach check could not be completed{detail}. NOT an all-clear; "
+                        "configure a valid HIBP API key and re-run."]
+    section(f"Data Breaches ({len(data['breaches'])})", breach_lines)
     section(f"Online Accounts ({len(data['accounts'])})",
             [f"{a['site']}: {a['url']}" for a in data["accounts"]])
     section(f"Google Exposure ({len(data['google_exposure'])})",

@@ -161,8 +161,12 @@ def job_breach_recheck(db: Database, config: Config) -> JobResult:
             ))
             total_new += results.get("total", 0)
             _persist_breaches(db, person.id, results)
+            # Record whether the check actually completed, so reports can tell
+            # "checked & clean" from "couldn't check".
+            db.record_breach_check(person.id, results.get("checked", True))
         except Exception as e:
             logger.error(f"Breach check failed for {email}: {e}")
+            db.record_breach_check(person.id, False)
 
     # Alert if new findings
     for person in persons_with_email:
