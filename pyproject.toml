@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "digital-footprint"
+version = "1.0.0"
+description = "Self-hosted personal data removal and privacy protection (data-broker opt-out, breach + dark-web monitoring, exposure reporting)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Marc Shade", email = "marc@2acrestudios.com" }]
+keywords = ["privacy", "data-broker", "ccpa", "gdpr", "opt-out", "osint", "mcp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
+dependencies = [
+    "fastmcp>=2.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.0",
+    "playwright>=1.40",
+    "playwright-stealth>=1.0",
+    "httpx>=0.27",
+    "jinja2>=3.1",
+    "cryptography>=42",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+dfp = "digital_footprint.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/marc-shade/digital-footprint"
+Repository = "https://github.com/marc-shade/digital-footprint"
+
+[tool.setuptools]
+# server.py and scheduler.py are top-level modules (MCP server + cron entry),
+# not inside the package; ship them so `python -m digital_footprint` and
+# `python scheduler.py` work from an installed copy.
+py-modules = ["server", "scheduler"]
+
+[tool.setuptools.packages.find]
+include = ["digital_footprint*"]
+
+[tool.setuptools.package-data]
+# Broker registry + legal templates live inside the package and MUST ship,
+# or an installed copy can't load brokers or render removal emails.
+digital_footprint = ["brokers/*.yaml", "removers/templates/*.j2"]

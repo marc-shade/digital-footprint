@@ -187,10 +187,18 @@ class Database:
                         logger.warning("could not chmod 600 %s: %s", p, e)
 
     def _migrate_schema(self) -> None:
-        """Additive migrations for DBs created before a column existed."""
-        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(findings)")}
-        if "content_hash" not in cols:
+        """Additive migrations for DBs created before a column existed.
+
+        CREATE TABLE IF NOT EXISTS never alters an existing table, so columns
+        added to the schema over time must be back-filled here or an older DB
+        raises 'no such column' at runtime.
+        """
+        finding_cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(findings)")}
+        if "content_hash" not in finding_cols:
             self.conn.execute("ALTER TABLE findings ADD COLUMN content_hash TEXT")
+        broker_cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(brokers)")}
+        if "search_url_pattern" not in broker_cols:
+            self.conn.execute("ALTER TABLE brokers ADD COLUMN search_url_pattern TEXT")
 
     # --- PII field encryption helpers ---
 
