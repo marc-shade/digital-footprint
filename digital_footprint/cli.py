@@ -246,6 +246,23 @@ def protect(person_id):
     click.echo(result)
 
 
+# -- Report command --
+
+@cli.command("report")
+@click.argument("person_id", type=int)
+@click.option("--format", "-f", "fmt", default="markdown",
+              type=click.Choice(["markdown", "json", "html", "pdf"]),
+              help="Output format (default: markdown).")
+@click.option("--output", "-o", type=click.Path(), default=None,
+              help="Write to this file instead of stdout (required-shape for pdf).")
+def report(person_id, fmt, output):
+    """Generate an exposure report for a person (markdown/json/html/pdf)."""
+    from digital_footprint.tools.scan_tools import do_exposure_report
+    db = _get_db()
+    result = do_exposure_report(person_id=person_id, db=db, fmt=fmt, output_path=output)
+    click.echo(result)
+
+
 # -- Status command --
 
 @cli.command()

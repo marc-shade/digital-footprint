@@ -73,6 +73,7 @@ This installs the `dfp` command:
 dfp --help
 dfp scan dorks "Your Name" --email you@example.com
 dfp broker list
+dfp report 1 --format pdf --output exposure.pdf   # markdown|json|html|pdf
 ```
 
 ### Configure
@@ -227,13 +228,17 @@ Exposure reports include a 0-100 risk score based on weighted findings:
 
 Scores map to labels: **CRITICAL** (75+), **HIGH** (50-74), **MODERATE** (25-49), **LOW** (0-24).
 
+Reports render in **markdown, JSON, HTML, or PDF** (`dfp report <id> --format …`,
+or the `footprint_exposure_report` MCP tool with a `format` argument). PDF uses
+fpdf2 (pure-Python, no native dependencies).
+
 ## Tests
 
 ```bash
 python -m pytest tests/ -v
 ```
 
-310 tests covering all modules. Zero external API calls in tests — all external services are mocked. This includes an end-to-end MCP suite that drives the server's tools through the real FastMCP client.
+325 tests covering all modules. Zero external API calls in tests — all external services are mocked. This includes an end-to-end MCP suite that drives the server's tools through the real FastMCP client.
 
 ## External Services
 
