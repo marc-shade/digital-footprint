@@ -29,6 +29,40 @@ class RemovalOrchestrator:
         # phone, mail, or unknown -> manual instructions
         return self.manual_handler
 
+    @staticmethod
+    def _build_contexts(person, broker, method):
+        person_ctx = {
+            "name": person.name,
+            "email": person.emails[0] if person.emails else "",
+            "phone": person.phones[0] if person.phones else "",
+            "address": person.addresses[0] if person.addresses else "",
+            "state": "",
+        }
+        broker_ctx = {
+            "name": broker.name,
+            "url": broker.url,
+            "opt_out_email": broker.opt_out_email or "",
+            "opt_out_url": broker.opt_out_url or "",
+            "ccpa_compliant": broker.ccpa_compliant,
+            "gdpr_compliant": broker.gdpr_compliant,
+            "recheck_days": broker.recheck_days,
+            "opt_out": {
+                "method": method,
+                "email": broker.opt_out_email or "",
+                "url": broker.opt_out_url or "",
+            },
+        }
+        return person_ctx, broker_ctx
+
+    def _dispatch(self, method, person_ctx, broker_ctx) -> dict:
+        handler = self.select_handler(method)
+        if method in ("email", "phone", "mail"):
+            return handler.submit(person=person_ctx, broker=broker_ctx)
+        # web_form is async; run it 3.12-safely (get_event_loop is deprecated
+        # with no running loop and raises from some contexts).
+        import asyncio
+        return asyncio.run(handler.submit(person=person_ctx, broker=broker_ctx))
+
     def submit_removal(
         self,
         person_id: int,
@@ -44,41 +78,10 @@ class RemovalOrchestrator:
             return {"status": "error", "message": f"Broker '{broker_slug}' not found"}
 
         method = broker.opt_out_method or "manual"
-        handler = self.select_handler(method)
+        person_ctx, broker_ctx = self._build_contexts(person, broker, method)
+        result = self._dispatch(method, person_ctx, broker_ctx)
 
-        person_ctx = {
-            "name": person.name,
-            "email": person.emails[0] if person.emails else "",
-            "phone": person.phones[0] if person.phones else "",
-            "address": person.addresses[0] if person.addresses else "",
-            "state": "",
-        }
-
-        broker_ctx = {
-            "name": broker.name,
-            "url": broker.url,
-            "opt_out_email": broker.opt_out_email or "",
-            "opt_out_url": broker.opt_out_url or "",
-            "ccpa_compliant": broker.ccpa_compliant,
-            "gdpr_compliant": broker.gdpr_compliant,
-            "recheck_days": broker.recheck_days,
-            "opt_out": {
-                "method": method,
-                "email": broker.opt_out_email or "",
-                "url": broker.opt_out_url or "",
-            },
-        }
-
-        # For sync handlers (email, manual)
-        if method in ("email", "phone", "mail"):
-            result = handler.submit(person=person_ctx, broker=broker_ctx)
-        else:
-            # web_form is async; run it 3.12-safely (get_event_loop is
-            # deprecated with no running loop and raises from some contexts).
-            import asyncio
-            result = asyncio.run(handler.submit(person=person_ctx, broker=broker_ctx))
-
-        # Record in DB
+        # Record a NEW removal row.
         next_check = (datetime.now() + timedelta(days=broker.recheck_days)).isoformat()
         db.insert_removal(
             person_id=person_id,
@@ -91,6 +94,26 @@ class RemovalOrchestrator:
         )
 
         return result
+
+    def resubmit(
+        self,
+        person_id: int,
+        broker_slug: str,
+        db: Database,
+    ) -> dict:
+        """Re-dispatch the opt-out for an EXISTING removal (no new row). Used by
+        the verify job to re-send a request the broker ignored, before
+        escalating. The caller updates the existing removal's tracking fields.
+        """
+        person = db.get_person(person_id)
+        if not person:
+            return {"status": "error", "message": f"Person {person_id} not found"}
+        broker = db.get_broker_by_slug(broker_slug)
+        if not broker:
+            return {"status": "error", "message": f"Broker '{broker_slug}' not found"}
+        method = broker.opt_out_method or "manual"
+        person_ctx, broker_ctx = self._build_contexts(person, broker, method)
+        return self._dispatch(method, person_ctx, broker_ctx)
 
     def get_status(self, person_id: int, db: Database) -> dict:
         removals = db.get_removals_by_person(person_id)

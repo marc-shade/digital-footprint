@@ -117,10 +117,63 @@ def test_verify_job_escalates_after_threshold(tmp_path):
         result = job_verify_removals(db, Config(db_path=tmp_path / "t.db"))
 
     assert result.details["escalated"] == 1
+    assert result.details["resubmitted"] == 0  # escalation wins at threshold
     complaints = list((tmp_path / "complaints").glob("complaint-*.txt"))
     assert len(complaints) == 1
     assert "Consumer Privacy Complaint" in complaints[0].read_text()
     assert db.get_removals_by_person(pid)[0]["status"] == "escalated"
+
+
+# --- auto-resubmit (P0-5): below the escalation threshold ---
+
+def test_verify_job_resubmit_pending_dry_run(tmp_path):
+    db = _db(tmp_path)
+    pid = db.insert_person("Jane Doe", emails=["j@x.com"])
+    broker = _broker(db)
+    db.insert_removal(person_id=pid, broker_id=broker.id, method="email",
+                      status="submitted", next_check_at="2000-01-01T00:00:00")
+    # attempts=0 -> verify makes 1 (< threshold) -> resubmit branch, dry run
+    with patch("digital_footprint.removers.verification.scan_broker", new_callable=AsyncMock) as m:
+        m.return_value = type("R", (), {"found": True})()
+        result = job_verify_removals(db, Config(db_path=tmp_path / "t.db"))  # auto_resubmit off
+    assert result.details["resubmit_pending"] == 1
+    assert result.details["resubmitted"] == 0
+    assert result.details["escalated"] == 0
+    r = db.get_removals_by_person(pid)[0]
+    assert "resubmit_pending" in (r["notes"] or "")
+    assert r["status"] == "submitted"  # not escalated, not confirmed
+
+
+def test_verify_job_resubmits_live_when_enabled(tmp_path):
+    from unittest.mock import MagicMock
+    db = _db(tmp_path)
+    pid = db.insert_person("Jane Doe", emails=["j@x.com"])
+    broker = _broker(db)
+    db.insert_removal(person_id=pid, broker_id=broker.id, method="email",
+                      status="submitted", next_check_at="2000-01-01T00:00:00")
+    cfg = Config(db_path=tmp_path / "t.db")
+    cfg.auto_resubmit = True
+    with patch("digital_footprint.removers.verification.scan_broker", new_callable=AsyncMock) as m, \
+         patch("digital_footprint.scheduler.jobs.RemovalOrchestrator") as OrchCls:
+        m.return_value = type("R", (), {"found": True})()
+        OrchCls.return_value.resubmit.return_value = {"status": "submitted"}
+        result = job_verify_removals(db, cfg)
+    assert result.details["resubmitted"] == 1
+    assert result.details["resubmit_pending"] == 0
+    OrchCls.return_value.resubmit.assert_called_once()
+
+
+def test_orchestrator_resubmit_creates_no_new_row(tmp_path):
+    from digital_footprint.removers.orchestrator import RemovalOrchestrator
+    db = _db(tmp_path)
+    pid = db.insert_person("Jane Doe", emails=["j@x.com"])
+    broker = _broker(db)
+    db.insert_removal(person_id=pid, broker_id=broker.id, method="email", status="submitted")
+    before = len(db.get_removals_by_person(pid))
+    # no SMTP configured -> the email send returns an error, but resubmit must
+    # not create a duplicate removal row regardless
+    RemovalOrchestrator().resubmit(pid, broker.slug, db)
+    assert len(db.get_removals_by_person(pid)) == before
 
 
 # --- report job reads persisted findings ---

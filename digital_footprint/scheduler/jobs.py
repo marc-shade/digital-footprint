@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
@@ -17,6 +17,7 @@ from digital_footprint.pipeline.alerter import check_and_alert
 from digital_footprint.removers.verification import RemovalVerifier
 from digital_footprint.removers import escalation
 from digital_footprint.removers.confirmation import ConfirmationProcessor, ImapFetcher
+from digital_footprint.removers.orchestrator import RemovalOrchestrator
 
 
 def _get(obj, key, default=None):
@@ -258,10 +259,15 @@ def job_verify_removals(db: Database, config: Config) -> JobResult:
         )
 
     verifier = RemovalVerifier()
+    orchestrator = RemovalOrchestrator(
+        smtp_host=config.smtp_host, smtp_port=config.smtp_port,
+        smtp_user=config.smtp_user, smtp_password=config.smtp_password,
+    )
     complaints_dir = config.db_path.parent / "complaints"
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     confirmed = still_listed = unverifiable = escalated = 0
+    resubmitted = resubmit_pending = resubmit_failed = 0
 
     for removal in pending:
         try:
@@ -286,14 +292,16 @@ def job_verify_removals(db: Database, config: Config) -> JobResult:
         # still_found or failed -> still listed
         still_listed += 1
         attempts = result.get("attempts", removal.get("attempts", 0) + 1)
-        db.update_removal(removal["id"], attempts=attempts, last_checked_at=now)
+        broker_row = db.get_broker_by_slug(removal.get("broker_slug", ""))
+        recheck_days = broker_row.recheck_days if broker_row else 7
+        next_check = (datetime.now() + timedelta(days=recheck_days)).strftime("%Y-%m-%d %H:%M:%S")
+        db.update_removal(removal["id"], attempts=attempts, last_checked_at=now, next_check_at=next_check)
 
         if attempts >= escalation.ESCALATION_ATTEMPT_THRESHOLD:
             person = db.get_person(removal["person_id"])
             if not person:
                 continue
             person_ctx = {"name": person.name, "email": person.emails[0] if person.emails else "", "state": ""}
-            broker_row = db.get_broker_by_slug(removal.get("broker_slug", ""))
             broker_ctx = {
                 "name": removal.get("broker_name", ""),
                 "slug": removal.get("broker_slug", ""),
@@ -319,6 +327,25 @@ def job_verify_removals(db: Database, config: Config) -> JobResult:
                 logger.info(f"Escalation complaint drafted for removal {removal['id']}: {path}")
             except Exception as e:
                 logger.error(f"Escalation draft failed for removal {removal['id']}: {e}")
+        else:
+            # Below the escalation threshold: resubmit the ignored request.
+            # Dry-run by default (record intent, contact no broker); only send
+            # when DIGITAL_FOOTPRINT_AUTO_RESUBMIT is on.
+            if config.auto_resubmit:
+                try:
+                    res = orchestrator.resubmit(removal["person_id"], removal.get("broker_slug", ""), db)
+                    if res.get("status") == "submitted":
+                        resubmitted += 1
+                        db.update_removal(removal["id"], submitted_at=now, notes=f"resubmitted (attempt {attempts})")
+                    else:
+                        resubmit_failed += 1
+                        db.update_removal(removal["id"], notes=f"resubmit failed: {res.get('message') or res.get('status')}")
+                except Exception as e:
+                    resubmit_failed += 1
+                    logger.error(f"Resubmit failed for removal {removal['id']}: {e}")
+            else:
+                resubmit_pending += 1
+                db.update_removal(removal["id"], notes=f"resubmit_pending (attempt {attempts})")
 
     return JobResult(
         job_name="verify_removals",
@@ -331,6 +358,9 @@ def job_verify_removals(db: Database, config: Config) -> JobResult:
             "still_listed": still_listed,
             "unverifiable": unverifiable,
             "escalated": escalated,
+            "resubmitted": resubmitted,
+            "resubmit_pending": resubmit_pending,
+            "resubmit_failed": resubmit_failed,
         },
     )
 

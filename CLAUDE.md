@@ -65,7 +65,11 @@ tests/                   # Test suite (262 tests)
   skips them (logged, not silent). Blind opt-out submission does not need it.
 - Live broker removals only fire when the pipeline is called with
   `submit_removals=True`; the default is a dry run that records intended
-  removals without contacting brokers.
+  removals without contacting brokers. Likewise the verify job resubmits a
+  still-listed removal (once, before escalating) only when
+  `DIGITAL_FOOTPRINT_AUTO_RESUBMIT=1`; otherwise it records `resubmit_pending`.
+  Resubmit re-dispatches via `RemovalOrchestrator.resubmit()` (no new removal
+  row); escalation still wins once the attempt threshold is reached.
 - **Email confirmation loop** (`removers/confirmation.py`, scheduler job
   `process_confirmations`): polls the IMAP inbox, matches "confirm your
   removal" emails to pending removals (by reference id / sender domain /
