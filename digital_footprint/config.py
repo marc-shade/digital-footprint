@@ -3,6 +3,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -20,6 +21,16 @@ class Config:
     smtp_user: str = ""
     smtp_password: str = ""
     alert_email: str = ""
+    # Encryption at rest for PII (see crypto.py). Off by default; enabled by
+    # DIGITAL_FOOTPRINT_ENCRYPT=1 or by setting DIGITAL_FOOTPRINT_DB_KEY.
+    encrypt: bool = False
+    key_path: Optional[Path] = None
+
+    def resolved_key_path(self) -> Path:
+        """Where the key file lives when encryption uses a generated key."""
+        if self.key_path is not None:
+            return self.key_path
+        return self.db_path.parent / "db.key"
 
 
 def get_config() -> Config:
@@ -41,5 +52,8 @@ def get_config() -> Config:
     config.smtp_user = os.environ.get("SMTP_USER", "")
     config.smtp_password = os.environ.get("SMTP_PASSWORD", "")
     config.alert_email = os.environ.get("ALERT_EMAIL", "")
+
+    from digital_footprint.crypto import encryption_requested
+    config.encrypt = encryption_requested()
 
     return config

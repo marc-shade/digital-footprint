@@ -50,10 +50,16 @@ tests/                   # Test suite (262 tests)
 - SQLite (WAL) for state, enhanced-memory-mcp for cross-session knowledge
 
 ## Known constraints (do not overstate in docs)
-- **PII is NOT encrypted at rest.** State lives in a plain SQLite DB at
-  `~/.digital-footprint/footprint.db`. Do not claim encryption until
-  SQLCipher (or equivalent) is actually wired. Restrict the file at the OS
-  level (chmod 600) meanwhile.
+- **PII encryption at rest is available but OFF by default.** Enable with
+  `DIGITAL_FOOTPRINT_ENCRYPT=1` (generates a chmod-600 key file next to the
+  DB) or `DIGITAL_FOOTPRINT_DB_KEY=<fernet key>`. When on, PII columns
+  (names, emails, phones, addresses, DOB, finding URLs/blobs) are Fernet-
+  encrypted; the DB file shows no personal data to `strings`. When off, the
+  DB is plaintext and logs a warning on open. Scope: field-level, not
+  full-file — schema/column names/timestamps/status stay visible; breach
+  rows are pseudonymous (person_id FK only). SQLCipher was rejected because
+  its native lib does not pip-install cleanly here. Migrate an existing
+  plaintext DB with `Database.migrate_to_encrypted()`.
 - **Automated broker discovery/verification needs `search_url_pattern`** in
   each broker YAML. Most brokers do not have it yet, so the discovery scanner
   skips them (logged, not silent). Blind opt-out submission does not need it.
