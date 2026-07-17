@@ -56,8 +56,9 @@ async def test_submit_fills_form_and_submits(mock_browser):
     mock_locator.fill = AsyncMock()
 
     mock_page = AsyncMock()
+    mock_page.title = AsyncMock(return_value="Opt Out - TestBroker")
     mock_page.content = AsyncMock(return_value="<div><input name='email'><button type='submit'>Submit</button></div>")
-    mock_page.inner_text = AsyncMock(return_value="Your request has been submitted")
+    mock_page.inner_text = AsyncMock(return_value="Data removal opt-out form. Enter your details to request removal of your listing.")
     mock_page.locator = MagicMock(return_value=MagicMock(first=mock_locator))
 
     mock_context = AsyncMock()
@@ -87,6 +88,8 @@ async def test_submit_fills_form_and_submits(mock_browser):
 @patch("digital_footprint.removers.web_form_remover.create_stealth_browser")
 async def test_submit_captcha_detected(mock_browser):
     mock_page = AsyncMock()
+    mock_page.title = AsyncMock(return_value="Opt Out - TestBroker")
+    mock_page.inner_text = AsyncMock(return_value="Please complete the verification below to continue with your opt-out request.")
     mock_page.content = AsyncMock(return_value='<div class="g-recaptcha">captcha here</div>')
 
     mock_context = AsyncMock()
@@ -123,8 +126,9 @@ async def test_submit_no_form_fields(mock_browser):
     mock_locator.count = AsyncMock(return_value=0)
 
     mock_page = AsyncMock()
+    mock_page.title = AsyncMock(return_value="TestBroker")
     mock_page.content = AsyncMock(return_value="<div>No form here</div>")
-    mock_page.inner_text = AsyncMock(return_value="This page has no form")
+    mock_page.inner_text = AsyncMock(return_value="This informational page has no fillable form fields for automated opt-out.")
     mock_page.locator = MagicMock(return_value=MagicMock(first=mock_locator))
 
     mock_context = AsyncMock()
@@ -142,3 +146,25 @@ async def test_submit_no_form_fields(mock_browser):
         )
 
     assert result["status"] == "no_form_found"
+
+
+@pytest.mark.asyncio
+@patch("digital_footprint.removers.web_form_remover.create_stealth_browser")
+async def test_submit_reports_blocked_on_challenge(mock_browser):
+    # an anti-bot challenge page must be reported as 'blocked', not silently
+    # treated as a form failure (this is what the 4 live brokers do)
+    mock_page = AsyncMock()
+    mock_page.title = AsyncMock(return_value="Just a moment...")
+    mock_page.inner_text = AsyncMock(return_value="Checking your browser before accessing the site.")
+    mock_page.content = AsyncMock(return_value="<div>cf challenge</div>")
+
+    mock_context = AsyncMock()
+    mock_context.new_page = AsyncMock(return_value=mock_page)
+    mock_browser.return_value = (AsyncMock(), AsyncMock(), mock_context)
+
+    result = await WebFormRemover().submit(
+        person={"name": "John Doe", "email": "john@example.com"},
+        broker={"name": "Radaris", "opt_out_url": "https://radaris.com/control/privacy"},
+    )
+    assert result["status"] == "blocked"
+    assert "Manual action required" in result["message"]
