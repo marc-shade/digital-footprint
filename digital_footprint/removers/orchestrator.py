@@ -100,10 +100,16 @@ class RemovalOrchestrator:
         person_id: int,
         broker_slug: str,
         db: Database,
+        reference_id: Optional[str] = None,
+        original_date: Optional[str] = None,
     ) -> dict:
         """Re-dispatch the opt-out for an EXISTING removal (no new row). Used by
         the verify job to re-send a request the broker ignored, before
         escalating. The caller updates the existing removal's tracking fields.
+
+        For email brokers a resubmit is a SECOND request, so it sends the
+        escalation-tone follow-up (followup.j2) rather than re-sending the
+        original deletion template. Other methods re-run the standard dispatch.
         """
         person = db.get_person(person_id)
         if not person:
@@ -113,6 +119,11 @@ class RemovalOrchestrator:
             return {"status": "error", "message": f"Broker '{broker_slug}' not found"}
         method = broker.opt_out_method or "manual"
         person_ctx, broker_ctx = self._build_contexts(person, broker, method)
+        if method == "email" and reference_id:
+            return self.email_handler.send_followup(
+                person=person_ctx, broker=broker_ctx,
+                reference_id=reference_id, original_date=original_date or "unknown",
+            )
         return self._dispatch(method, person_ctx, broker_ctx)
 
     def get_status(self, person_id: int, db: Database) -> dict:

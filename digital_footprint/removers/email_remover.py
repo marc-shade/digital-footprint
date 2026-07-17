@@ -10,6 +10,14 @@ from typing import Optional
 from jinja2 import Environment, FileSystemLoader
 
 
+def _days_since(date_str: str) -> int:
+    """Whole days between an ISO date string and now (0 if unparseable)."""
+    try:
+        return max(0, (datetime.now() - datetime.fromisoformat(str(date_str))).days)
+    except Exception:
+        return 0
+
+
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
@@ -89,6 +97,11 @@ class EmailRemover:
                 "message": f"No opt-out email for {broker['name']}",
             }
 
+        return self._send_email(recipient, subject, body, reference_id)
+
+    def _send_email(self, recipient: str, subject: str, body: str, reference_id: str) -> dict:
+        """Send one email over SMTP and return a submitted-status dict. Shared
+        by the initial opt-out and the follow-up second request."""
         msg = MIMEText(body)
         msg["Subject"] = subject
         msg["From"] = self.smtp_user
@@ -107,3 +120,20 @@ class EmailRemover:
             "subject": subject,
             "submitted_at": datetime.now().isoformat(),
         }
+
+    def send_followup(self, person: dict, broker: dict, reference_id: str, original_date: str) -> dict:
+        """Send the escalation-tone follow-up (second request) for a removal a
+        broker ignored, using followup.j2 instead of re-sending the original
+        deletion request."""
+        if not self.smtp_host or not self.smtp_user:
+            return {
+                "status": "error", "method": "email",
+                "message": "SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD in .env",
+            }
+        recipient = broker.get("opt_out_email", "")
+        if not recipient:
+            return {"status": "error", "method": "email", "message": f"No opt-out email for {broker.get('name', '')}"}
+
+        from digital_footprint.removers.escalation import render_followup
+        subject, body = render_followup(person, broker, reference_id, original_date, _days_since(original_date))
+        return self._send_email(recipient, subject, body, reference_id)
