@@ -233,7 +233,7 @@ Scores map to labels: **CRITICAL** (75+), **HIGH** (50-74), **MODERATE** (25-49)
 python -m pytest tests/ -v
 ```
 
-306 tests covering all modules. Zero external API calls in tests — all external services are mocked.
+310 tests covering all modules. Zero external API calls in tests — all external services are mocked. This includes an end-to-end MCP suite that drives the server's tools through the real FastMCP client.
 
 ## External Services
 
