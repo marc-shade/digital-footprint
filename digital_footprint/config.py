@@ -28,6 +28,10 @@ class Config:
     # Auto-visit broker confirmation links found over IMAP. Off by default:
     # when off, the link is recorded for the human to click.
     auto_confirm: bool = False
+    # Auto-resubmit a removal that is still listed (before escalation). Off by
+    # default: when off, the verify job records that a resubmit is due instead
+    # of contacting the broker.
+    auto_resubmit: bool = False
     # Encryption at rest for PII (see crypto.py). Off by default; enabled by
     # DIGITAL_FOOTPRINT_ENCRYPT=1 or by setting DIGITAL_FOOTPRINT_DB_KEY.
     encrypt: bool = False
@@ -64,6 +68,7 @@ def get_config() -> Config:
     config.imap_password = os.environ.get("IMAP_PASSWORD", "")
     config.alert_email = os.environ.get("ALERT_EMAIL", "")
     config.auto_confirm = os.environ.get("DIGITAL_FOOTPRINT_AUTO_CONFIRM", "").strip().lower() in ("1", "true", "yes", "on")
+    config.auto_resubmit = os.environ.get("DIGITAL_FOOTPRINT_AUTO_RESUBMIT", "").strip().lower() in ("1", "true", "yes", "on")
 
     from digital_footprint.crypto import encryption_requested
     config.encrypt = encryption_requested()
