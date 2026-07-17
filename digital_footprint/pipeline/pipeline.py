@@ -91,7 +91,8 @@ def protect_person(
     # Create pipeline run record
     run_id = db.insert_pipeline_run(person_id=person_id, started_at=started)
 
-    breach_results = {"hibp_breaches": [], "dehashed_records": [], "total": 0}
+    breach_results = {"hibp_breaches": [], "dehashed_records": [], "total": 0,
+                      "checked": True, "errors": []}
     dark_web_results = {"pastes": [], "ahmia_results": [], "holehe_results": [], "total": 0}
     username_results = []
 
@@ -107,8 +108,14 @@ def protect_person(
                 breach_results["hibp_breaches"].extend(results.get("hibp_breaches", []))
                 breach_results["dehashed_records"].extend(results.get("dehashed_records", []))
                 breach_results["total"] += results.get("total", 0)
+                if not results.get("checked", True):
+                    breach_results["checked"] = False
+                    breach_results["errors"].extend(results.get("errors", []))
             except Exception as e:
                 logger.error(f"Breach check failed for {email}: {e}")
+                breach_results["checked"] = False
+                breach_results["errors"].append(str(e))
+        db.record_breach_check(person_id, breach_results["checked"])
 
     # Stage 2: Dark web scan
     if person.emails:
@@ -250,6 +257,8 @@ def protect_person(
         "hibp_breaches": hibp_dicts,
         "dehashed_records": dehashed_dicts,
         "total": breach_results["total"],
+        "checked": breach_results.get("checked", True),
+        "errors": breach_results.get("errors", []),
     }
 
     report = generate_exposure_report(

@@ -80,6 +80,8 @@ def generate_exposure_report(
     # Breach results
     hibp = breach_results.get("hibp_breaches", [])
     dehashed = breach_results.get("dehashed_records", [])
+    breach_checked = breach_results.get("checked", True)
+    breach_errors = breach_results.get("errors", [])
     lines.append(f"## Data Breaches ({len(hibp)} breaches, {len(dehashed)} records)")
     lines.append("")
     if hibp:
@@ -92,7 +94,14 @@ def generate_exposure_report(
             db_name = r.get("database_name", "Unknown")
             lines.append(f"- **{db_name}**: Exposed record found")
     if not hibp and not dehashed:
-        lines.append("No breach records found.")
+        if breach_checked:
+            lines.append("No breach records found.")
+        else:
+            # Do NOT imply "clean" when the check could not run (bad key, rate
+            # limit): that would be a false all-clear.
+            detail = f" ({'; '.join(breach_errors)})" if breach_errors else ""
+            lines.append(f"**Breach check could not be completed{detail}.** "
+                         "This is NOT an all-clear — configure a valid HIBP API key and re-run.")
     lines.append("")
 
     # Username results

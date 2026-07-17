@@ -39,9 +39,19 @@ def collect_report_inputs(db: Database, person_id: int) -> dict:
         {"site_name": f.get("finding_type", "dark_web"), "url": f.get("url"), "risk_level": f.get("risk_level", "high")}
         for f in findings if f.get("source") == "dark_web"
     ]
+    # A recorded breach-check FAILURE flips checked=False so the report shows
+    # "could not be completed", not a false all-clear. Never-run (None) keeps
+    # the default (don't nag when breach checking simply hasn't been used).
+    breach_ok = db.breach_check_ok(person_id)
+    breach_checked = breach_ok is not False
+    breach_errors = [] if breach_checked else ["last breach check failed (see logs / verify HIBP key)"]
     return {
         "broker_results": broker_results,
-        "breach_results": {"hibp_breaches": hibp, "dehashed_records": dehashed, "total": len(hibp) + len(dehashed)},
+        "breach_results": {
+            "hibp_breaches": hibp, "dehashed_records": dehashed,
+            "total": len(hibp) + len(dehashed),
+            "checked": breach_checked, "errors": breach_errors,
+        },
         "username_results": dark_web,
         "dork_results": [],
     }
