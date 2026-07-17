@@ -48,10 +48,21 @@ class DehashedRecord:
         return "medium"
 
 
+class BreachCheckError(Exception):
+    """A breach lookup could not be completed (bad key, rate limit, server
+    error) — the result is UNKNOWN, not 'no breaches'. Surfacing this instead
+    of returning [] prevents a false all-clear."""
+
+
 async def check_hibp(email: str, api_key: Optional[str] = None) -> list[HibpBreach]:
-    """Check Have I Been Pwned for breaches affecting this email."""
+    """Check Have I Been Pwned for breaches affecting this email.
+
+    404 legitimately means "no breaches". 401/403 (bad key), 429 (rate limit)
+    and 5xx mean the check FAILED — raise so the caller doesn't report a false
+    all-clear.
+    """
     if not api_key:
-        return []
+        raise BreachCheckError("no HIBP API key configured")
 
     headers = {
         "hibp-api-key": api_key,
@@ -65,8 +76,14 @@ async def check_hibp(email: str, api_key: Optional[str] = None) -> list[HibpBrea
             params={"truncateResponse": "false"},
         )
 
+    if resp.status_code == 404:
+        return []  # genuinely no breaches for this account
+    if resp.status_code in (401, 403):
+        raise BreachCheckError(f"HIBP auth failed ({resp.status_code}) — invalid or expired API key")
+    if resp.status_code == 429:
+        raise BreachCheckError("HIBP rate limited (429)")
     if resp.status_code != 200:
-        return []
+        raise BreachCheckError(f"HIBP returned HTTP {resp.status_code}")
 
     breaches = resp.json()
     if not isinstance(breaches, list):
@@ -125,9 +142,23 @@ async def scan_breaches(
     hibp_api_key: Optional[str] = None,
     dehashed_api_key: Optional[str] = None,
 ) -> dict:
-    """Run all breach checks for an email address."""
-    hibp_results = await check_hibp(email, api_key=hibp_api_key)
-    dehashed_results = await check_dehashed(email, api_key=dehashed_api_key)
+    """Run all breach checks for an email address.
+
+    A check that could not complete (bad key, rate limit) is reported in
+    `errors` with `checked=False`, NOT silently as zero breaches — so callers
+    never present an unverified lookup as a clean all-clear.
+    """
+    errors = []
+    try:
+        hibp_results = await check_hibp(email, api_key=hibp_api_key)
+    except BreachCheckError as e:
+        hibp_results = []
+        errors.append(f"hibp: {e}")
+    try:
+        dehashed_results = await check_dehashed(email, api_key=dehashed_api_key)
+    except BreachCheckError as e:
+        dehashed_results = []
+        errors.append(f"dehashed: {e}")
 
     return {
         "email": email,
@@ -136,4 +167,6 @@ async def scan_breaches(
         "dehashed_records": dehashed_results,
         "dehashed_count": len(dehashed_results),
         "total": len(hibp_results) + len(dehashed_results),
+        "errors": errors,
+        "checked": not errors,
     }

@@ -64,6 +64,16 @@ def test_explicit_output_path_writes_file(tmp_path):
     assert out_file.exists() and out_file.read_text().startswith("<!doctype html>")
 
 
+def test_output_path_creates_missing_parent_dir(tmp_path):
+    # regression: an explicit output_path in a not-yet-existing dir must be
+    # created, not raise FileNotFoundError
+    db, pid = _db_with_findings(tmp_path)
+    out_file = tmp_path / "nested" / "dir" / "report.json"
+    msg = do_exposure_report(pid, db, fmt="json", output_path=out_file)
+    assert "Wrote json report to" in msg
+    assert out_file.exists()
+
+
 def test_missing_person(tmp_path):
     db = Database(Config(db_path=tmp_path / "r.db"))
     db.initialize()

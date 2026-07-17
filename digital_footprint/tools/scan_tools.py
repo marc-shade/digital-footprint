@@ -137,6 +137,7 @@ def do_exposure_report(
             slug = person.name.lower().replace(" ", "-")
             output_path = reports_dir / f"exposure-{slug}.{_EXT.get(fmt, 'txt')}"
         output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         if isinstance(content, bytes):
             output_path.write_bytes(content)
         else:
