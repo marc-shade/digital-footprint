@@ -11,7 +11,7 @@ def test_do_schedule_status_empty():
     result = do_schedule_status(db)
     parsed = json.loads(result)
     assert "jobs" in parsed
-    assert len(parsed["jobs"]) == 4
+    assert len(parsed["jobs"]) == 5
     for job in parsed["jobs"]:
         assert job["status"] == "never_run"
 

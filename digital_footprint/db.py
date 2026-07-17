@@ -442,6 +442,36 @@ class Database:
             result.append(d)
         return result
 
+    def get_removals_for_confirmation(self) -> list[dict]:
+        """Submitted removals awaiting an email confirmation, enriched with the
+        broker domain and the person's emails so the IMAP monitor can match
+        incoming confirmation messages to the right removal."""
+        rows = self.conn.execute(
+            """
+            SELECT r.*,
+                   b.slug AS broker_slug,
+                   b.name AS broker_name,
+                   b.url  AS broker_url,
+                   p.emails AS person_emails_enc
+            FROM removals r
+            JOIN brokers b ON r.broker_id = b.id
+            JOIN persons p ON r.person_id = p.id
+            WHERE r.status = 'submitted'
+            ORDER BY r.id
+            """,
+        ).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["reference_id"] = d.get("notes")
+            d["broker_domain"] = d.get("broker_url")
+            try:
+                d["person_emails"] = json.loads(self._dec(d.pop("person_emails_enc")) or "[]")
+            except (json.JSONDecodeError, TypeError):
+                d["person_emails"] = []
+            result.append(d)
+        return result
+
     # --- Finding operations ---
 
     def insert_finding(
