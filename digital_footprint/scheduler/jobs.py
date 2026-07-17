@@ -11,6 +11,7 @@ from typing import Any, Optional
 from digital_footprint.config import Config
 from digital_footprint.db import Database
 from digital_footprint.scanners.breach_scanner import scan_breaches
+from digital_footprint.scanners.broker_scanner import scan_broker
 from digital_footprint.monitors.dark_web_monitor import run_dark_web_scan
 from digital_footprint.reporters.exposure_report import generate_exposure_report
 from digital_footprint.pipeline.alerter import check_and_alert
@@ -92,6 +93,9 @@ JOB_INTERVALS = {
     "generate_report": 7,
     # Confirmation links expire fast; check the inbox daily.
     "process_confirmations": 1,
+    # Re-scan confirmed removals weekly; per-removal due date honors the
+    # broker's recheck_days.
+    "recheck_confirmed": 7,
 }
 
 
@@ -480,3 +484,85 @@ def job_process_confirmations(db: Database, config: Config) -> JobResult:
         "unmatched": result.unmatched,
         "auto_confirm": config.auto_confirm,
     })
+
+
+def job_recheck_confirmed(db: Database, config: Config) -> JobResult:
+    """Re-scan confirmed removals and reopen any the broker has re-listed.
+
+    A broker often re-adds you weeks after a confirmed deletion. This re-scans
+    confirmed removals that are due (per the broker's recheck_days) and, on a
+    re-listing, marks the old removal 're_listed', records a finding, and opens
+    a fresh 'pending' removal so the normal submit/verify loop takes over. A
+    blocked/errored scan is treated as unknown (removal stays confirmed), never
+    as a false re-listing.
+    """
+    started = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    due = db.get_confirmed_removals_due_recheck()
+    if not due:
+        return JobResult(
+            job_name="recheck_confirmed", started_at=started,
+            completed_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            status="skipped", details={"due": 0, "message": "no confirmed removals due for re-check"},
+        )
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    relisted = still_gone = unverifiable = reopened = 0
+
+    for removal in due:
+        pattern = removal.get("search_url_pattern")
+        if not pattern:
+            unverifiable += 1
+            db.update_removal(removal["id"], last_checked_at=now)
+            continue
+        try:
+            result = _run_async(scan_broker(
+                broker_slug=removal.get("broker_slug", ""),
+                broker_name=removal.get("broker_name", ""),
+                url_pattern=pattern,
+                first_name=removal.get("person_first_name", ""),
+                last_name=removal.get("person_last_name", ""),
+            ))
+        except Exception as e:
+            logger.error(f"Re-listing scan failed for removal {removal['id']}: {e}")
+            unverifiable += 1
+            continue
+
+        if getattr(result, "blocked", False) or getattr(result, "status", "") == "error":
+            unverifiable += 1
+            db.update_removal(removal["id"], last_checked_at=now)
+            continue
+
+        if not result.found:
+            still_gone += 1
+            db.update_removal(removal["id"], last_checked_at=now)
+            continue
+
+        # Re-listed: mark the old removal, record a finding, open a fresh removal.
+        relisted += 1
+        db.update_removal(removal["id"], status="re_listed", last_checked_at=now,
+                          notes=f"re-listed, re-check confirmed at {now}")
+        finding_id = db.insert_finding(
+            person_id=removal["person_id"], source="broker", finding_type="relisting",
+            data_found={"broker_name": removal.get("broker_name", ""),
+                        "broker_slug": removal.get("broker_slug", "")},
+            risk_level="medium", url=getattr(result, "url", ""),
+            broker_id=removal.get("broker_id"),
+        )
+        db.insert_removal(
+            person_id=removal["person_id"], broker_id=removal["broker_id"],
+            method=removal.get("method", "manual"), finding_id=finding_id, status="pending",
+        )
+        reopened += 1
+
+    return JobResult(
+        job_name="recheck_confirmed", started_at=started,
+        completed_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        status="success",
+        details={
+            "due": len(due),
+            "still_gone": still_gone,
+            "relisted": relisted,
+            "reopened": reopened,
+            "unverifiable": unverifiable,
+        },
+    )

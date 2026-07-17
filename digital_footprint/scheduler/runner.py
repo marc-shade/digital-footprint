@@ -15,6 +15,7 @@ from digital_footprint.scheduler.jobs import (
     job_verify_removals,
     job_generate_report,
     job_process_confirmations,
+    job_recheck_confirmed,
 )
 
 logger = logging.getLogger("digital_footprint.scheduler")
@@ -25,6 +26,7 @@ JOB_FUNCTIONS = {
     "verify_removals": job_verify_removals,
     "generate_report": job_generate_report,
     "process_confirmations": job_process_confirmations,
+    "recheck_confirmed": job_recheck_confirmed,
 }
 
 
