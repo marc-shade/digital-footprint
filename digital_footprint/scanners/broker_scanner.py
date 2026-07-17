@@ -13,10 +13,55 @@ class BrokerScanResult:
     page_text: Optional[str] = None
     screenshot_path: Optional[str] = None
     error: Optional[str] = None
+    # status distinguishes the four outcomes that `found` alone conflates:
+    #   found      -- the person's name appeared in a real results page
+    #   not_found  -- a real page loaded and the name was absent
+    #   blocked    -- an anti-bot challenge / empty shell was served (we learn
+    #                 NOTHING about listing; must NOT be reported as clean)
+    #   error      -- navigation failed (timeout, DNS, etc.)
+    status: str = "not_found"
+    blocked: bool = False
 
     @property
     def risk_level(self) -> str:
         return "high" if self.found else "low"
+
+
+# Markers of an anti-bot challenge / interstitial rather than real content.
+# Lowercased substring match against the page title + body.
+_CHALLENGE_MARKERS = (
+    "just a moment",              # Cloudflare
+    "checking your browser",      # Cloudflare legacy
+    "attention required",         # Cloudflare block
+    "cf-browser-verification",
+    "enable javascript and cookies to continue",
+    "verify you are human",
+    "verifying you are human",
+    "luktelėkite",                # DataDome interstitial (observed on FastPeopleSearch)
+    "loading search results",     # DataDome placeholder that never resolves
+    "please wait while we",
+    "ddos protection by",
+    "px-captcha",                 # PerimeterX
+    "captcha-delivery",
+    "access denied",
+    "request blocked",
+    "unusual traffic",
+)
+
+
+def detect_challenge(title: str, body: str) -> bool:
+    """True if the page looks like an anti-bot challenge / empty shell.
+
+    Two signals: (1) a known challenge marker in title/body, or (2) an
+    essentially empty body (a JS-challenge shell renders no text). Either
+    means we did NOT see real results and cannot conclude the person is absent.
+    """
+    blob = f"{title or ''}\n{body or ''}".lower()
+    if any(marker in blob for marker in _CHALLENGE_MARKERS):
+        return True
+    if len((body or "").strip()) < 40:
+        return True
+    return False
 
 
 def build_search_url(
@@ -69,16 +114,34 @@ async def scan_broker(
 
         try:
             await page.goto(url, timeout=timeout)
-            await page.wait_for_load_state("networkidle", timeout=timeout)
+            # networkidle can hang forever behind a JS challenge; fall back to
+            # domcontentloaded so a challenged site is reported as blocked
+            # rather than raising a bare timeout.
+            try:
+                await page.wait_for_load_state("networkidle", timeout=timeout)
+            except Exception:
+                await page.wait_for_load_state("domcontentloaded", timeout=5000)
+
+            try:
+                title = await page.title()
+            except Exception:
+                title = ""
             page_text = await page.inner_text("body")
 
-            found = check_name_in_results(page_text, first_name, last_name)
+            if detect_challenge(title, page_text):
+                return BrokerScanResult(
+                    broker_slug=broker_slug, broker_name=broker_name, url=url,
+                    found=False, status="blocked", blocked=True,
+                    error="anti-bot challenge or empty shell (listing status unknown)",
+                )
 
+            found = check_name_in_results(page_text, first_name, last_name)
             return BrokerScanResult(
                 broker_slug=broker_slug,
                 broker_name=broker_name,
                 url=url,
                 found=found,
+                status="found" if found else "not_found",
                 page_text=page_text[:500] if found else None,
             )
         finally:
@@ -92,6 +155,7 @@ async def scan_broker(
             broker_name=broker_name,
             url=url,
             found=False,
+            status="error",
             error=str(e),
         )
 

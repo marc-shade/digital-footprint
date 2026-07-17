@@ -2,6 +2,10 @@ name: Radaris
 url: https://radaris.com
 category: people_search
 
+# Verified 2026-07-17 against the live site with two common test names
+# (real results pages returned). Used by the automated discovery scanner.
+search_url_pattern: "https://radaris.com/p/{first}/{last}"
+
 opt_out:
   method: web_form
   url: https://radaris.com/control/privacy

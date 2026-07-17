@@ -30,6 +30,7 @@ class Broker:
     opt_out_method: Optional[str] = None
     opt_out_url: Optional[str] = None
     opt_out_email: Optional[str] = None
+    search_url_pattern: Optional[str] = None
     difficulty: str = "medium"
     automatable: bool = False
     recheck_days: int = 30
@@ -49,6 +50,11 @@ class Broker:
             opt_out_method=opt_out.get("method"),
             opt_out_url=opt_out.get("url"),
             opt_out_email=opt_out.get("email"),
+            # Search URL template for automated discovery/verification.
+            # Accepts {first}/{last}/{state}/{city} placeholders. Read from
+            # opt_out.search_url_pattern or a top-level key. Unpopulated for
+            # most brokers today (real per-broker data task, not fabricated).
+            search_url_pattern=opt_out.get("search_url_pattern") or data.get("search_url_pattern"),
             difficulty=data.get("difficulty", "medium"),
             automatable=data.get("automatable", False),
             recheck_days=data.get("recheck_days", 30),

@@ -1,0 +1,58 @@
+Subject: Consumer Privacy Complaint - {{ broker.name }} failure to honor deletion request [Ref: {{ reference_id }}]
+
+{{ filed_date }}
+
+{% if person.state == 'California' -%}
+California Attorney General - Office of the Attorney General
+Consumer Privacy Complaint (CCPA / CPRA)
+Submit at: https://oag.ca.gov/contact/consumer-complaint-against-business-or-company
+{%- else -%}
+Federal Trade Commission - Report at https://reportfraud.ftc.gov
+{% if person.state %}State Attorney General ({{ person.state }}){% else %}Relevant State Attorney General{% endif %}
+{%- endif %}
+
+COMPLAINT AGAINST: {{ broker.name }} ({{ broker.url }})
+COMPLAINANT: {{ person.name }} ({{ person.email }})
+
+Nature of complaint
+-------------------
+{{ broker.name }} is a data broker that has failed to honor a legally mandated
+personal-information deletion request after {{ attempts }} separate request(s).
+
+Timeline
+--------
+- First deletion request submitted: {{ first_request_date }}
+- Number of requests sent: {{ attempts }}
+- Most recent verification: still listing my personal information as of {{ last_checked }}
+- Reference ID: {{ reference_id }}
+
+Legal basis
+-----------
+{% if broker.ccpa_compliant or person.state == 'California' -%}
+Under the California Consumer Privacy Act (Cal. Civ. Code Section 1798.105), a
+business must delete a consumer's personal information upon a verifiable request
+and may not continue to retain or sell it. {{ broker.name }} has not complied
+within the statutory 45-day window.
+{%- else -%}
+Under applicable state consumer-privacy law and Section 5 of the FTC Act
+(unfair or deceptive practices), {{ broker.name }} is obligated to honor a
+consumer deletion request and has failed to do so.
+{%- endif %}
+
+Requested relief
+----------------
+1. Compel {{ broker.name }} to delete all of my personal information.
+2. Confirm in writing that deletion has occurred.
+3. Investigate {{ broker.name }}'s handling of consumer deletion requests.
+
+Supporting records (dates, reference IDs, and re-listing evidence) are retained
+and available on request.
+
+Complainant
+-----------
+Full Name: {{ person.name }}
+Email: {{ person.email }}
+{% if person.state %}State of residence: {{ person.state }}{% endif %}
+
+{{ person.name }}
+{{ filed_date }}

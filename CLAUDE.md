@@ -18,28 +18,45 @@ python -m digital_footprint.cli scan     # CLI scan
 python -m pytest tests/                  # Run tests
 ```
 
-## Key Directories
+## Key Directories (actual layout)
 ```
-src/digital_footprint/
-  server.py              # MCP server entry
-  cli.py                 # CLI entry (Click)
-  db/                    # Database models and migrations
-  scanners/              # Broker/OSINT/breach scanners
-  removers/              # Per-broker removal automation
-  monitors/              # Dark web and re-listing monitors
-  reporters/             # Report generation
-  templates/             # Email and legal templates
-  utils/                 # Shared utilities
-brokers/                 # YAML broker registry files
-agents/                  # Claude Code agent definitions
-skills/                  # Claude Code skill definitions
-tests/                   # Test suite
+digital_footprint/
+  __init__.py            # `python -m digital_footprint` -> MCP server (server.py)
+  cli.py                 # CLI entry (Click): python -m digital_footprint.cli
+  db.py                  # SQLite manager (schema + all queries)
+  models.py              # Person, Broker, Finding, Removal, Breach, Scan
+  config.py              # env-based Config
+  broker_registry.py     # YAML broker loader
+  brokers/               # YAML broker registry files (50)
+  scanners/              # broker/breach/username/dork/darkweb scanners
+  removers/              # email/web_form/manual removal + verification + escalation
+    templates/           # Jinja2 legal templates (CCPA/GDPR/followup/complaint)
+  monitors/              # dark web monitoring orchestrator
+  reporters/             # exposure report generator
+  scheduler/             # cron job runner (breach/darkweb/verify/report)
+  pipeline/              # end-to-end orchestrator + email alerter
+  tools/                 # MCP tool implementations
+server.py                # FastMCP server
+scheduler.py             # cron CLI
+.claude/skills/          # Claude Code skill definitions (7)
+tests/                   # Test suite (262 tests)
 ```
 
 ## Conventions
 - Python 3.11+, type hints throughout
 - Playwright for browser automation (stealth mode)
-- All PII encrypted at rest
 - Rate limit all external requests
 - YAML for broker definitions, Jinja2 for templates
-- SQLite for state, enhanced-memory-mcp for cross-session knowledge
+- SQLite (WAL) for state, enhanced-memory-mcp for cross-session knowledge
+
+## Known constraints (do not overstate in docs)
+- **PII is NOT encrypted at rest.** State lives in a plain SQLite DB at
+  `~/.digital-footprint/footprint.db`. Do not claim encryption until
+  SQLCipher (or equivalent) is actually wired. Restrict the file at the OS
+  level (chmod 600) meanwhile.
+- **Automated broker discovery/verification needs `search_url_pattern`** in
+  each broker YAML. Most brokers do not have it yet, so the discovery scanner
+  skips them (logged, not silent). Blind opt-out submission does not need it.
+- Live broker removals only fire when the pipeline is called with
+  `submit_removals=True`; the default is a dry run that records intended
+  removals without contacting brokers.

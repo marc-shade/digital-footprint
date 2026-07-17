@@ -2,6 +2,10 @@ name: Zabasearch
 url: https://www.zabasearch.com
 category: people_search
 
+# Verified 2026-07-17 against the live site with two common test names
+# ("More than N records found for <name>"). Used by the discovery scanner.
+search_url_pattern: "https://www.zabasearch.com/people/{first}+{last}"
+
 opt_out:
   method: web_form
   url: https://suppression.peopleconnect.us/login

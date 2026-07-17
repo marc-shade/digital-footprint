@@ -71,7 +71,8 @@ def generate_exposure_report(
     lines.append("")
     if found_brokers:
         for b in found_brokers:
-            lines.append(f"- **{b['broker_name']}**: {b.get('url', 'N/A')}")
+            name = b.get("broker_name") or b.get("broker_slug") or "Unknown broker"
+            lines.append(f"- **{name}**: {b.get('url', 'N/A')}")
     else:
         lines.append("No data broker listings detected.")
     lines.append("")
@@ -83,7 +84,9 @@ def generate_exposure_report(
     lines.append("")
     if hibp:
         for b in hibp:
-            lines.append(f"- **{b['name']}** ({b.get('breach_date', 'unknown')}): {', '.join(b.get('data_classes', []))}")
+            bname = b.get("name") or b.get("breach_name") or "Unknown breach"
+            classes = b.get("data_classes") or b.get("data_types") or []
+            lines.append(f"- **{bname}** ({b.get('breach_date', 'unknown')}): {', '.join(classes)}")
     if dehashed:
         for r in dehashed:
             db_name = r.get("database_name", "Unknown")
@@ -97,7 +100,8 @@ def generate_exposure_report(
     lines.append("")
     if username_results:
         for u in username_results:
-            lines.append(f"- **{u['site_name']}**: {u.get('url', 'N/A')}")
+            site = u.get("site_name") or u.get("site") or "Unknown site"
+            lines.append(f"- **{site}**: {u.get('url', 'N/A')}")
     else:
         lines.append("No accounts discovered.")
     lines.append("")

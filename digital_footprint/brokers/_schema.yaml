@@ -16,6 +16,13 @@ optional:
     email_verification: boolean
     phone_verification: boolean
     time_to_removal: string
+  # Search URL template used by the automated discovery + verification
+  # scanner. Placeholders: {first} {last} {state} {city}. WITHOUT this, a
+  # broker cannot be auto-scanned (is-this-person-listed) or auto-verified
+  # after removal; only blind opt-out submission works. Populating this per
+  # broker is a real data task -- do not invent patterns.
+  # Example: search_url_pattern: "https://www.example.com/find/{first}-{last}"
+  search_url_pattern: string
   difficulty: enum  # easy|medium|hard|manual
   automatable: boolean
   recheck_days: integer
