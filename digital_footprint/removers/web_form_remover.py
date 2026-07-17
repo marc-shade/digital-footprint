@@ -6,6 +6,16 @@ from pathlib import Path
 from typing import Optional
 
 from digital_footprint.scanners.playwright_scanner import create_stealth_browser, random_delay
+from digital_footprint.scanners.broker_scanner import detect_challenge
+
+
+async def _safe(coro, default):
+    """Await coro, returning default if it raises (title/body reads can fail on
+    a challenge page). Explicit fallback, not a silent swallow."""
+    try:
+        return await coro
+    except Exception:
+        return default
 
 
 CAPTCHA_PATTERNS = [
@@ -163,7 +173,27 @@ class WebFormRemover:
 
             try:
                 await page.goto(opt_out_url, timeout=timeout)
-                await page.wait_for_load_state("networkidle", timeout=timeout)
+                # networkidle hangs behind anti-bot/JS challenges (these opt-out
+                # sites never go idle); fall back to domcontentloaded so we get
+                # a real page state instead of an opaque timeout, matching the
+                # broker scanner's strategy.
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=timeout)
+                except Exception:
+                    await page.wait_for_load_state("domcontentloaded", timeout=5000)
+
+                # Anti-bot challenge / empty shell: report it as such (manual
+                # action needed) rather than a misleading form outcome.
+                title = await _safe(page.title(), "")
+                body_text = await _safe(page.inner_text("body"), "")
+                if detect_challenge(title, body_text):
+                    return {
+                        "status": "blocked",
+                        "method": "web_form",
+                        "broker": broker.get("name", ""),
+                        "url": opt_out_url,
+                        "message": f"Anti-bot challenge on {broker.get('name', '')}; opt-out could not be automated. Manual action required at {opt_out_url}",
+                    }
 
                 # Check for CAPTCHA
                 html = await page.content()

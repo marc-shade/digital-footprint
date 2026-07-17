@@ -238,7 +238,7 @@ fpdf2 (pure-Python, no native dependencies).
 python -m pytest tests/ -v
 ```
 
-337 tests covering all modules. Zero external API calls in tests — all external services are mocked. This includes an end-to-end MCP suite that drives the server's tools through the real FastMCP client.
+339 tests covering all modules. Zero external API calls in tests — all external services are mocked. This includes an end-to-end MCP suite that drives the server's tools through the real FastMCP client.
 
 ## External Services
 
