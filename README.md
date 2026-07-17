@@ -8,11 +8,20 @@ Self-hosted personal data removal and privacy protection system. Replicates the 
 
 ## What It Does
 
-- **Discovers** your exposure across 51 data brokers, breach databases, dark web paste sites, and 3,000+ username registries
+- **Discovers** your exposure across 50 data brokers, breach databases, dark web paste sites, and 3,000+ username registries
 - **Removes** your data via automated CCPA/GDPR opt-out emails, web form submissions, and guided manual processes
 - **Monitors** for re-listing, new breaches, and dark web appearances on a recurring schedule
+- **Escalates** brokers that ignore 2+ requests by drafting an FTC / state-AG complaint (you file it)
 - **Alerts** you via email when new threats are detected
 - **Reports** your risk score and full exposure in Markdown reports
+
+> **Two operational notes.** (1) Live opt-out submissions only fire when you
+> opt in (`submit_removals=True`); the default pipeline is a dry run that
+> records intended removals without contacting any broker. (2) Automated
+> *discovery* and post-removal *verification* require a `search_url_pattern`
+> in each broker YAML; most are not populated yet, so those brokers are
+> skipped (logged) until the pattern is added. Blind opt-out submission works
+> without it.
 
 ## Architecture
 
@@ -22,10 +31,10 @@ digital_footprint/
   db.py                  # SQLite database (WAL mode)
   models.py              # Person, Broker, Finding, Removal, Breach, Scan
   broker_registry.py     # YAML broker loader
-  brokers/               # 51 data broker definitions (YAML)
+  brokers/               # 50 data broker definitions (YAML)
   scanners/              # Breach, username, dark web, Google dork, Playwright
-  removers/              # Email, web form, manual removal + verification
-    templates/           # 5 Jinja2 legal templates (CCPA, GDPR)
+  removers/              # Email, web form, manual removal + verification + escalation
+    templates/           # 6 Jinja2 legal templates (CCPA, GDPR, followup, complaint)
   monitors/              # Dark web monitoring orchestrator
   reporters/             # Exposure report generator with risk scoring
   scheduler/             # Cron-based job runner (breach, dark web, verify, report)
@@ -138,7 +147,7 @@ This runs breach rechecks (weekly), dark web monitoring (every 3 days), removal 
 
 ## Data Broker Registry
 
-51 broker definitions in YAML covering:
+50 broker definitions in YAML covering:
 
 - **People search engines** (BeenVerified, Spokeo, WhitePages, Intelius, etc.)
 - **Background check services** (TruthFinder, InstantCheckmate, etc.)
@@ -149,13 +158,14 @@ Each broker definition includes opt-out method, URL, difficulty rating, CCPA/GDP
 
 ## Legal Templates
 
-Five Jinja2 templates for automated opt-out emails:
+Six Jinja2 templates for automated opt-out emails and escalation:
 
 - `ccpa_deletion.j2` — California Consumer Privacy Act deletion request
 - `ccpa_do_not_sell.j2` — CCPA Do Not Sell My Personal Information
 - `gdpr_erasure.j2` — GDPR Right to Erasure (Article 17)
 - `generic_removal.j2` — General data removal request
-- `followup.j2` — Follow-up for unresponsive brokers
+- `followup.j2` — Follow-up (second request) for unresponsive brokers
+- `regulatory_complaint.j2` — FTC / state-AG complaint draft, generated after a broker ignores 2+ requests
 
 ## Risk Scoring
 
@@ -176,7 +186,7 @@ Scores map to labels: **CRITICAL** (75+), **HIGH** (50-74), **MODERATE** (25-49)
 python -m pytest tests/ -v
 ```
 
-233 tests covering all modules. Zero external API calls in tests — all external services are mocked.
+262 tests covering all modules. Zero external API calls in tests — all external services are mocked.
 
 ## External Services
 

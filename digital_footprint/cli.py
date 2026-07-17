@@ -136,9 +136,9 @@ def scan_username(username, timeout):
 @click.option("--phone", "-p", help="Phone to include in dorks")
 def scan_dorks(name, email, phone):
     """Generate Google dork queries for OSINT."""
-    from digital_footprint.scanners.google_dorker import generate_dorks
+    from digital_footprint.scanners.google_dorker import build_dork_queries
 
-    dorks = generate_dorks(name=name, email=email, phone=phone)
+    dorks = build_dork_queries(name=name, email=email, phone=phone)
     click.echo(f"Google Dork Queries for '{name}':\n")
     for i, dork in enumerate(dorks, 1):
         click.echo(f"  {i}. {dork}")

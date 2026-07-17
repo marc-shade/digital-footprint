@@ -73,11 +73,10 @@ class RemovalOrchestrator:
         if method in ("email", "phone", "mail"):
             result = handler.submit(person=person_ctx, broker=broker_ctx)
         else:
-            # web_form is async but we call from sync context
+            # web_form is async; run it 3.12-safely (get_event_loop is
+            # deprecated with no running loop and raises from some contexts).
             import asyncio
-            result = asyncio.get_event_loop().run_until_complete(
-                handler.submit(person=person_ctx, broker=broker_ctx)
-            )
+            result = asyncio.run(handler.submit(person=person_ctx, broker=broker_ctx))
 
         # Record in DB
         next_check = (datetime.now() + timedelta(days=broker.recheck_days)).isoformat()

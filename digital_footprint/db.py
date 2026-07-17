@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS brokers (
     opt_out_method TEXT,
     opt_out_url TEXT,
     opt_out_email TEXT,
+    search_url_pattern TEXT,
     difficulty TEXT DEFAULT 'medium',
     automatable INTEGER DEFAULT 0,
     recheck_days INTEGER DEFAULT 30,
@@ -224,11 +225,13 @@ class Database:
         cursor = self.conn.execute(
             """INSERT OR REPLACE INTO brokers
             (slug, name, url, category, opt_out_method, opt_out_url, opt_out_email,
-             difficulty, automatable, recheck_days, ccpa_compliant, gdpr_compliant, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             search_url_pattern, difficulty, automatable, recheck_days,
+             ccpa_compliant, gdpr_compliant, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 broker.slug, broker.name, broker.url, broker.category,
                 broker.opt_out_method, broker.opt_out_url, broker.opt_out_email,
+                broker.search_url_pattern,
                 broker.difficulty, int(broker.automatable), broker.recheck_days,
                 int(broker.ccpa_compliant), int(broker.gdpr_compliant), broker.notes,
             ),
@@ -293,6 +296,7 @@ class Database:
             opt_out_method=row["opt_out_method"],
             opt_out_url=row["opt_out_url"],
             opt_out_email=row["opt_out_email"],
+            search_url_pattern=row["search_url_pattern"] if "search_url_pattern" in row.keys() else None,
             difficulty=row["difficulty"],
             automatable=bool(row["automatable"]),
             recheck_days=row["recheck_days"],
@@ -347,10 +351,148 @@ class Database:
         self.conn.commit()
 
     def get_pending_verifications(self) -> list[dict]:
+        """Removals due for re-verification, enriched with the broker and
+        person fields RemovalVerifier.verify_single needs (broker slug/name,
+        search_url_pattern, person first/last name). The verifier cannot
+        re-scan without these, so the join lives here rather than being
+        re-fetched per row by the caller.
+        """
         rows = self.conn.execute(
-            "SELECT * FROM removals WHERE status = 'submitted' AND next_check_at <= datetime('now') ORDER BY next_check_at",
+            """
+            SELECT r.*,
+                   b.slug AS broker_slug,
+                   b.name AS broker_name,
+                   b.search_url_pattern AS search_url_pattern,
+                   p.name AS person_name
+            FROM removals r
+            JOIN brokers b ON r.broker_id = b.id
+            JOIN persons p ON r.person_id = p.id
+            WHERE r.status = 'submitted' AND r.next_check_at <= datetime('now')
+            ORDER BY r.next_check_at
+            """,
         ).fetchall()
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            name = (d.get("person_name") or "").strip()
+            parts = name.split()
+            d["person_first_name"] = parts[0] if parts else ""
+            d["person_last_name"] = parts[-1] if len(parts) > 1 else ""
+            result.append(d)
+        return result
+
+    # --- Finding operations ---
+
+    def insert_finding(
+        self,
+        person_id: int,
+        source: str,
+        finding_type: str,
+        data_found: Optional[dict] = None,
+        risk_level: str = "medium",
+        url: Optional[str] = None,
+        broker_id: Optional[int] = None,
+        screenshot_path: Optional[str] = None,
+        status: str = "active",
+    ) -> int:
+        """Insert a finding, de-duplicating on (person, source, url, broker).
+
+        Re-scans re-surface the same listing; without the de-dup the findings
+        table would grow unbounded and reports would double-count. An existing
+        row is refreshed (updated_at, risk, status) instead of duplicated.
+        """
+        existing = self.conn.execute(
+            """SELECT id FROM findings
+               WHERE person_id = ? AND source = ?
+                 AND IFNULL(url, '') = IFNULL(?, '')
+                 AND IFNULL(broker_id, -1) = IFNULL(?, -1)""",
+            (person_id, source, url, broker_id),
+        ).fetchone()
+        if existing:
+            self.conn.execute(
+                "UPDATE findings SET risk_level = ?, status = ?, data_found = ?, updated_at = datetime('now') WHERE id = ?",
+                (risk_level, status, json.dumps(data_found or {}), existing["id"]),
+            )
+            self.conn.commit()
+            return existing["id"]
+        cursor = self.conn.execute(
+            """INSERT INTO findings
+            (person_id, broker_id, source, finding_type, data_found, risk_level, url, screenshot_path, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                person_id, broker_id, source, finding_type,
+                json.dumps(data_found or {}), risk_level, url, screenshot_path, status,
+            ),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_findings_by_person(self, person_id: int, status: Optional[str] = None) -> list[dict]:
+        query = "SELECT * FROM findings WHERE person_id = ?"
+        params: list = [person_id]
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+        query += " ORDER BY discovered_at DESC"
+        rows = self.conn.execute(query, params).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["data_found"] = json.loads(d.get("data_found") or "{}")
+            except (json.JSONDecodeError, TypeError):
+                d["data_found"] = {}
+            out.append(d)
+        return out
+
+    def update_finding_status(self, finding_id: int, status: str) -> None:
+        self.conn.execute(
+            "UPDATE findings SET status = ?, updated_at = datetime('now') WHERE id = ?",
+            (status, finding_id),
+        )
+        self.conn.commit()
+
+    # --- Breach operations ---
+
+    def insert_breach(
+        self,
+        person_id: int,
+        breach_name: str,
+        source: str,
+        breach_date: Optional[str] = None,
+        data_types: Optional[list[str]] = None,
+        severity: str = "medium",
+    ) -> int:
+        """Insert a breach, de-duplicating on (person, breach_name, source)."""
+        existing = self.conn.execute(
+            "SELECT id FROM breaches WHERE person_id = ? AND breach_name = ? AND source = ?",
+            (person_id, breach_name, source),
+        ).fetchone()
+        if existing:
+            return existing["id"]
+        cursor = self.conn.execute(
+            """INSERT INTO breaches
+            (person_id, breach_name, breach_date, data_types, source, severity)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+            (person_id, breach_name, breach_date, json.dumps(data_types or []), source, severity),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_breaches_by_person(self, person_id: int) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM breaches WHERE person_id = ? ORDER BY discovered_at DESC",
+            (person_id,),
+        ).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["data_types"] = json.loads(d.get("data_types") or "[]")
+            except (json.JSONDecodeError, TypeError):
+                d["data_types"] = []
+            out.append(d)
+        return out
 
     # --- Scheduled run operations ---
 
