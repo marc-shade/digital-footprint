@@ -14,6 +14,7 @@ from digital_footprint.scanners.breach_scanner import scan_breaches
 from digital_footprint.scanners.broker_scanner import scan_broker
 from digital_footprint.monitors.dark_web_monitor import run_dark_web_scan
 from digital_footprint.reporters.exposure_report import generate_exposure_report
+from digital_footprint.tools.scan_tools import collect_report_inputs
 from digital_footprint.pipeline.alerter import check_and_alert
 from digital_footprint.removers.verification import RemovalVerifier
 from digital_footprint.removers import escalation
@@ -387,50 +388,11 @@ def job_generate_report(db: Database, config: Config) -> JobResult:
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     for person in persons:
-        # Read what prior scan/monitor jobs persisted for this person, so the
-        # weekly report reflects real findings instead of empty sections.
-        findings = db.get_findings_by_person(person.id, status="active")
-        breaches = db.get_breaches_by_person(person.id)
-
-        broker_results = [
-            {
-                "found": True,
-                "broker_name": (f.get("data_found") or {}).get("broker_name") or f.get("url") or "broker",
-                "broker_slug": (f.get("data_found") or {}).get("broker_slug"),
-                "url": f.get("url"),
-                "risk_level": f.get("risk_level", "medium"),
-            }
-            for f in findings if f.get("source") == "broker"
-        ]
-        hibp_dicts = [
-            {
-                "name": b.get("breach_name"),
-                "breach_date": b.get("breach_date"),
-                "data_classes": b.get("data_types", []),
-                "severity": b.get("severity", "medium"),
-            }
-            for b in breaches if b.get("source") == "hibp"
-        ]
-        dehashed_dicts = [
-            {"database_name": b.get("breach_name"), "severity": b.get("severity", "medium")}
-            for b in breaches if b.get("source") == "dehashed"
-        ]
-        dark_web_findings = [
-            {"site_name": f.get("finding_type", "dark_web"), "url": f.get("url"), "risk_level": f.get("risk_level", "high")}
-            for f in findings if f.get("source") == "dark_web"
-        ]
-
-        report = generate_exposure_report(
-            person_name=person.name,
-            broker_results=broker_results,
-            breach_results={
-                "hibp_breaches": hibp_dicts,
-                "dehashed_records": dehashed_dicts,
-                "total": len(hibp_dicts) + len(dehashed_dicts),
-            },
-            username_results=dark_web_findings,
-            dork_results=[],
-        )
+        # Read what prior scan/monitor jobs persisted for this person (shared
+        # with the exposure-report tool), so the weekly report reflects real
+        # findings instead of empty sections.
+        inputs = collect_report_inputs(db, person.id)
+        report = generate_exposure_report(person_name=person.name, **inputs)
         date_str = datetime.now().strftime("%Y-%m-%d")
         report_path = reports_dir / f"{date_str}-{person.name.lower().replace(' ', '-')}.md"
         report_path.write_text(report)

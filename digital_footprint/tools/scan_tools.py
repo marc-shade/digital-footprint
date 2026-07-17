@@ -1,11 +1,50 @@
 """MCP scan tools for Digital Footprint."""
 
 import json
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 from digital_footprint.db import Database
 from digital_footprint.scanners.breach_scanner import scan_breaches
 from digital_footprint.reporters.exposure_report import generate_exposure_report
+from digital_footprint.reporters.formats import render_report
+
+
+def collect_report_inputs(db: Database, person_id: int) -> dict:
+    """Read persisted findings/breaches for a person into the four report
+    inputs. Shared by the exposure-report tool and the scheduler report job so
+    both reflect the same data."""
+    findings = db.get_findings_by_person(person_id, status="active")
+    breaches = db.get_breaches_by_person(person_id)
+    broker_results = [
+        {
+            "found": True,
+            "broker_name": (f.get("data_found") or {}).get("broker_name") or f.get("url") or "broker",
+            "broker_slug": (f.get("data_found") or {}).get("broker_slug"),
+            "url": f.get("url"),
+            "risk_level": f.get("risk_level", "medium"),
+        }
+        for f in findings if f.get("source") == "broker"
+    ]
+    hibp = [
+        {"name": b.get("breach_name"), "breach_date": b.get("breach_date"),
+         "data_classes": b.get("data_types", []), "severity": b.get("severity", "medium")}
+        for b in breaches if b.get("source") == "hibp"
+    ]
+    dehashed = [
+        {"database_name": b.get("breach_name"), "severity": b.get("severity", "medium")}
+        for b in breaches if b.get("source") == "dehashed"
+    ]
+    dark_web = [
+        {"site_name": f.get("finding_type", "dark_web"), "url": f.get("url"), "risk_level": f.get("risk_level", "high")}
+        for f in findings if f.get("source") == "dark_web"
+    ]
+    return {
+        "broker_results": broker_results,
+        "breach_results": {"hibp_breaches": hibp, "dehashed_records": dehashed, "total": len(hibp) + len(dehashed)},
+        "username_results": dark_web,
+        "dork_results": [],
+    }
 
 
 async def do_breach_check(
@@ -54,6 +93,9 @@ async def do_breach_check(
     return json.dumps(output, indent=2)
 
 
+_EXT = {"markdown": "md", "md": "md", "json": "json", "html": "html", "pdf": "pdf"}
+
+
 def do_exposure_report(
     person_id: int,
     db: Database,
@@ -61,16 +103,44 @@ def do_exposure_report(
     breach_results: Optional[dict] = None,
     username_results: Optional[list] = None,
     dork_results: Optional[list] = None,
+    fmt: str = "markdown",
+    output_path: Optional[Union[str, Path]] = None,
 ) -> str:
-    """Generate exposure report for a person."""
+    """Generate an exposure report for a person in the requested format.
+
+    Reads persisted findings from the DB when explicit results aren't passed.
+    Returns the report text for markdown/json/html; PDF (binary) and any
+    explicit output_path are written to a file and the path is returned.
+    """
     person = db.get_person(person_id)
     if not person:
         return f"Person with id {person_id} not found."
 
-    return generate_exposure_report(
-        person_name=person.name,
-        broker_results=broker_results or [],
-        breach_results=breach_results or {"hibp_breaches": [], "dehashed_records": [], "total": 0},
-        username_results=username_results or [],
-        dork_results=dork_results or [],
-    )
+    if broker_results is None and breach_results is None and username_results is None:
+        inputs = collect_report_inputs(db, person_id)
+    else:
+        inputs = {
+            "broker_results": broker_results or [],
+            "breach_results": breach_results or {"hibp_breaches": [], "dehashed_records": [], "total": 0},
+            "username_results": username_results or [],
+            "dork_results": dork_results or [],
+        }
+
+    content = render_report(person_name=person.name, fmt=fmt, **inputs)
+
+    # PDF is binary and can't be returned as MCP text; write it. An explicit
+    # output_path forces a file for any format.
+    if fmt == "pdf" or output_path is not None:
+        if output_path is None:
+            reports_dir = db.config.db_path.parent / "reports"
+            reports_dir.mkdir(parents=True, exist_ok=True)
+            slug = person.name.lower().replace(" ", "-")
+            output_path = reports_dir / f"exposure-{slug}.{_EXT.get(fmt, 'txt')}"
+        output_path = Path(output_path)
+        if isinstance(content, bytes):
+            output_path.write_bytes(content)
+        else:
+            output_path.write_text(content)
+        return f"Wrote {fmt} report to {output_path}"
+
+    return content

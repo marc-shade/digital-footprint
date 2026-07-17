@@ -84,9 +84,13 @@ async def footprint_username_search(username: str) -> str:
     ], indent=2)
 
 @mcp.tool()
-def footprint_exposure_report(person_id: int = 1) -> str:
-    """Generate a comprehensive exposure report for a person."""
-    return do_exposure_report(person_id=person_id, db=db)
+def footprint_exposure_report(person_id: int = 1, format: str = "markdown") -> str:
+    """Generate a comprehensive exposure report for a person.
+
+    format: markdown (default), json, html, or pdf. PDF is written to a file
+    and the path is returned (it's binary); the others are returned inline.
+    """
+    return do_exposure_report(person_id=person_id, db=db, fmt=format)
 
 @mcp.tool()
 def footprint_google_dork(name: str, additional_terms: str = None) -> str:
