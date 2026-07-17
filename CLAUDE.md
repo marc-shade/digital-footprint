@@ -66,3 +66,12 @@ tests/                   # Test suite (262 tests)
 - Live broker removals only fire when the pipeline is called with
   `submit_removals=True`; the default is a dry run that records intended
   removals without contacting brokers.
+- **Email confirmation loop** (`removers/confirmation.py`, scheduler job
+  `process_confirmations`): polls the IMAP inbox, matches "confirm your
+  removal" emails to pending removals (by reference id / sender domain /
+  person email), extracts the link, and — only when
+  `DIGITAL_FOOTPRINT_AUTO_CONFIRM=1` — visits it. Security invariant: a link
+  is visited only if it is on the broker's own registrable domain, so a
+  phishing email in the inbox can't turn it into a click bot. The IMAP fetch
+  layer (`ImapFetcher.fetch_recent`) is real imaplib but is NOT yet verified
+  against a live mailbox; everything downstream of the fetch is tested.

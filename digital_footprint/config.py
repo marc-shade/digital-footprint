@@ -20,7 +20,14 @@ class Config:
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
+    imap_host: str = ""
+    imap_port: int = 993
+    imap_user: str = ""
+    imap_password: str = ""
     alert_email: str = ""
+    # Auto-visit broker confirmation links found over IMAP. Off by default:
+    # when off, the link is recorded for the human to click.
+    auto_confirm: bool = False
     # Encryption at rest for PII (see crypto.py). Off by default; enabled by
     # DIGITAL_FOOTPRINT_ENCRYPT=1 or by setting DIGITAL_FOOTPRINT_DB_KEY.
     encrypt: bool = False
@@ -51,7 +58,12 @@ def get_config() -> Config:
     config.smtp_port = int(os.environ.get("SMTP_PORT", "587"))
     config.smtp_user = os.environ.get("SMTP_USER", "")
     config.smtp_password = os.environ.get("SMTP_PASSWORD", "")
+    config.imap_host = os.environ.get("IMAP_HOST", "")
+    config.imap_port = int(os.environ.get("IMAP_PORT", "993"))
+    config.imap_user = os.environ.get("IMAP_USER", "")
+    config.imap_password = os.environ.get("IMAP_PASSWORD", "")
     config.alert_email = os.environ.get("ALERT_EMAIL", "")
+    config.auto_confirm = os.environ.get("DIGITAL_FOOTPRINT_AUTO_CONFIRM", "").strip().lower() in ("1", "true", "yes", "on")
 
     from digital_footprint.crypto import encryption_requested
     config.encrypt = encryption_requested()

@@ -140,7 +140,18 @@ Add to your crontab (`crontab -e`):
 0 3 * * * cd /path/to/digital-footprint && /path/to/venv/bin/python scheduler.py >> scheduler.log 2>&1
 ```
 
-This runs breach rechecks (weekly), dark web monitoring (every 3 days), removal verification (daily), and report generation (weekly).
+This runs breach rechecks (weekly), dark web monitoring (every 3 days), removal verification (daily), confirmation-inbox processing (daily), and report generation (weekly).
+
+### Email confirmation loop
+
+Many brokers email a "click to confirm your removal" link; without it the
+opt-out never completes. Set `IMAP_HOST` / `IMAP_USER` / `IMAP_PASSWORD` (a
+dedicated inbox) and the `process_confirmations` scheduler job polls it,
+matches each message to a pending removal, and extracts the confirmation link.
+With `DIGITAL_FOOTPRINT_AUTO_CONFIRM=1` it visits the link automatically;
+otherwise it records the link on the removal for you to click. For safety, a
+link is only ever visited if it is on the broker's own domain — a phishing
+message in the inbox is never clicked.
 
 ## MCP Tools
 
@@ -213,7 +224,7 @@ Scores map to labels: **CRITICAL** (75+), **HIGH** (50-74), **MODERATE** (25-49)
 python -m pytest tests/ -v
 ```
 
-282 tests covering all modules. Zero external API calls in tests — all external services are mocked.
+297 tests covering all modules. Zero external API calls in tests — all external services are mocked.
 
 ## External Services
 

@@ -16,6 +16,7 @@ from digital_footprint.reporters.exposure_report import generate_exposure_report
 from digital_footprint.pipeline.alerter import check_and_alert
 from digital_footprint.removers.verification import RemovalVerifier
 from digital_footprint.removers import escalation
+from digital_footprint.removers.confirmation import ConfirmationProcessor, ImapFetcher
 
 
 def _get(obj, key, default=None):
@@ -88,6 +89,8 @@ JOB_INTERVALS = {
     "dark_web_monitor": 3,
     "verify_removals": 1,
     "generate_report": 7,
+    # Confirmation links expire fast; check the inbox daily.
+    "process_confirmations": 1,
 }
 
 
@@ -406,3 +409,44 @@ def job_generate_report(db: Database, config: Config) -> JobResult:
         status="success",
         details={"persons_reported": len(persons)},
     )
+
+
+def job_process_confirmations(db: Database, config: Config) -> JobResult:
+    """Poll the confirmation inbox and complete removals whose broker emailed a
+    'click to confirm' link. Off unless IMAP is configured; only visits links
+    when DIGITAL_FOOTPRINT_AUTO_CONFIRM is on (else records the link)."""
+    started = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    def done(status, details, error=None):
+        return JobResult(
+            job_name="process_confirmations", started_at=started,
+            completed_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            status=status, details=details, error=error,
+        )
+
+    if not (config.imap_host and config.imap_user and config.imap_password):
+        return done("skipped", {"message": "IMAP not configured (IMAP_HOST/IMAP_USER/IMAP_PASSWORD)"})
+
+    pending = db.get_removals_for_confirmation()
+    if not pending:
+        return done("skipped", {"pending": 0, "message": "no removals awaiting confirmation"})
+
+    try:
+        fetcher = ImapFetcher(config.imap_host, config.imap_user, config.imap_password, config.imap_port)
+        messages = fetcher.fetch_recent()
+    except Exception as e:
+        logger.error(f"IMAP fetch failed: {e}")
+        return done("failed", {"pending": len(pending)}, error=str(e))
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    processor = ConfirmationProcessor(auto_confirm=config.auto_confirm)
+    result = processor.process(db, messages, pending, now)
+    return done("success", {
+        "pending": len(pending),
+        "messages": result.processed,
+        "matched": result.matched,
+        "confirmed": result.confirmed,
+        "links_recorded": result.links_recorded,
+        "unmatched": result.unmatched,
+        "auto_confirm": config.auto_confirm,
+    })

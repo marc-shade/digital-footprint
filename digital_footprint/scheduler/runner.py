@@ -14,6 +14,7 @@ from digital_footprint.scheduler.jobs import (
     job_dark_web_monitor,
     job_verify_removals,
     job_generate_report,
+    job_process_confirmations,
 )
 
 logger = logging.getLogger("digital_footprint.scheduler")
@@ -23,6 +24,7 @@ JOB_FUNCTIONS = {
     "dark_web_monitor": job_dark_web_monitor,
     "verify_removals": job_verify_removals,
     "generate_report": job_generate_report,
+    "process_confirmations": job_process_confirmations,
 }
 
 
