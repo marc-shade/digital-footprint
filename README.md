@@ -63,7 +63,16 @@ scheduler.py             # Cron CLI entry point
 git clone https://github.com/marc-shade/digital-footprint.git
 cd digital-footprint
 python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"      # runtime + test deps; drop [dev] for runtime only
+playwright install chromium  # browser for broker scanning / form submission
+```
+
+This installs the `dfp` command:
+
+```bash
+dfp --help
+dfp scan dorks "Your Name" --email you@example.com
+dfp broker list
 ```
 
 ### Configure
@@ -224,7 +233,7 @@ Scores map to labels: **CRITICAL** (75+), **HIGH** (50-74), **MODERATE** (25-49)
 python -m pytest tests/ -v
 ```
 
-304 tests covering all modules. Zero external API calls in tests — all external services are mocked.
+306 tests covering all modules. Zero external API calls in tests — all external services are mocked.
 
 ## External Services
 
